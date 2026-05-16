@@ -1,636 +1,470 @@
-/*
-  Frontend (HTML + JavaScript puro)
-
-  Proyecto: Horarios Docentes
-
-  Seguridad:
-  - Mitigación XSS: uso de textContent en vez de innerHTML.
-  - Validaciones básicas antes de enviar datos al backend.
-*/
+/**
+ * Frontend - Sistema de Gestión de Horarios CIAF
+ * Arquitectura SPA con Distribución Dashboard (Sidebar Lateral + Contenedor Dinámico)
+ */
 
 (function () {
-  const app = document.getElementById("app");
+  const appContainer = document.getElementById("app");
 
-  const state = {
-    view: "menu",
-    edit: { idHorario: null },
-    list: {
-      orderBy: "fechaClase",
-      q: ""
-    }
+  // Estado global de la aplicación
+  const moduloEstado = {
+      vistaActiva: "inicio",
+      idSeleccionado: null,
+      filtrosTable: {
+          ordenador: "idHorario",
+          buscarTermino: ""
+      }
   };
 
-  function setGlobalDarkMode() {
-    document.documentElement.style.backgroundColor = "#243333";
-    document.documentElement.style.color = "#ffffff";
-
-    document.body.style.margin = "0";
-    document.body.style.backgroundColor = "#243333";
-    document.body.style.color = "#ffffff";
-    document.body.style.fontFamily = "'JetBrains Mono', monospace";
-    document.body.style.fontSize = "14px";
-  }
-
-  function el(tag, attrs) {
-    const node = document.createElement(tag);
-
-    if (attrs) {
-      for (const [k, v] of Object.entries(attrs)) {
-        if (k === "text") node.textContent = String(v);
-        else if (k === "value") node.value = String(v);
-        else if (k === "disabled") node.disabled = Boolean(v);
-        else node.setAttribute(k, String(v));
+  // Funciones utilitarias para la manipulación limpia del DOM
+  function crearNodo(tag, atributos = {}) {
+      const elemento = document.createElement(tag);
+      for (const [prop, valor] of Object.entries(atributos)) {
+          if (prop === "text") elemento.textContent = String(valor);
+          else if (prop === "html") elemento.innerHTML = String(valor);
+          else if (prop === "value") elemento.value = String(valor);
+          else if (prop === "disabled" && valor) elemento.setAttribute("disabled", "true");
+          else elemento.setAttribute(prop, String(valor));
       }
-    }
-
-    return node;
+      return elemento;
   }
 
-  function clearNode(node) {
-    while (node.firstChild) node.removeChild(node.firstChild);
+  function limpiarElemento(nodo) {
+      while (nodo.firstChild) nodo.removeChild(nodo.firstChild);
   }
 
-  function setBoxStyle(node) {
-    node.style.border = "1px solid #ffffff";
-    node.style.padding = "16px";
-    node.style.maxWidth = "900px";
-    node.style.margin = "40px auto";
-    node.style.backgroundColor = "#2c3f3f";
+  function transicionarModulo(nombreVista) {
+      moduloEstado.vistaActiva = nombreVista;
+      moduloEstado.idSeleccionado = null;
+      renderizarEstructuraBase();
   }
 
-  function setButtonStyle(btn) {
-    btn.style.fontFamily = "'JetBrains Mono', monospace";
-    btn.style.fontSize = "14px";
-    btn.style.padding = "8px 12px";
-    btn.style.margin = "6px";
-    btn.style.border = "1px solid #ffffff";
-    btn.style.backgroundColor = "#243333";
-    btn.style.color = "#ffffff";
-    btn.style.cursor = "pointer";
-  }
-
-  function setInputStyle(input, { disabled } = {}) {
-    input.style.fontFamily = "'JetBrains Mono', monospace";
-    input.style.fontSize = "14px";
-    input.style.padding = "6px";
-    input.style.margin = "4px 0 10px 0";
-    input.style.border = "1px solid #ffffff";
-    input.style.width = "100%";
-    input.style.boxSizing = "border-box";
-    input.style.backgroundColor = disabled ? "#4b4b4b" : "#243333";
-    input.style.color = "#ffffff";
-  }
-
-  function setLabelStyle(label) {
-    label.style.display = "block";
-    label.style.marginTop = "8px";
-  }
-
-  function setTitleStyle(title) {
-    title.style.textAlign = "center";
-    title.style.marginBottom = "14px";
-  }
-
-  function setMessage(node, text, kind) {
-    node.textContent = text || "";
-
-    if (!text) {
-      node.style.border = "0";
-      node.style.padding = "0";
-      return;
-    }
-
-    node.style.border = "1px solid #ffffff";
-    node.style.padding = "8px";
-    node.style.marginTop = "12px";
-
-    node.style.backgroundColor =
-      kind === "error" ? "#4a1f1f" : "#1f4a2a";
-  }
-
-  async function apiJson(method, url, body) {
-    const opts = {
-      method,
-      headers: {
-        "Content-Type": "application/json"
-      }
-    };
-
-    if (body !== undefined) {
-      opts.body = JSON.stringify(body);
-    }
-
-    const res = await fetch(url, opts);
-
-    const data = await res.json().catch(() => null);
-
-    if (!res.ok) {
-      const err = new Error(
-        data && data.message ? data.message : "Error"
-      );
-
-      err.status = res.status;
-      err.data = data;
-
-      throw err;
-    }
-
-    return data;
-  }
-
-  function normalizeText(value) {
-    return String(value || "").trim();
-  }
-
-  function validateRequired(fields) {
-    const empty = [];
-
-    for (const f of fields) {
-      if (!normalizeText(f.value)) {
-        empty.push(f.name);
-      }
-    }
-
-    return empty;
-  }
-
-  function showView(view) {
-    state.view = view;
-    render();
-  }
-
-  function buildHorarioForm({ mode }) {
-    const box = el("div");
-    setBoxStyle(box);
-
-    const title = el("h2", {
-      text:
-        mode === "create"
-          ? "Crear Horario"
-          : mode === "edit"
-          ? "Editar Horario"
-          : "Eliminar Horario"
-    });
-
-    setTitleStyle(title);
-
-    box.appendChild(title);
-
-    const form = el("div");
-
-    const docenteLabel = el("label", { text: "Docente" });
-    setLabelStyle(docenteLabel);
-
-    const docente = el("input", {
-      type: "text",
-      value: ""
-    });
-
-    setInputStyle(docente);
-
-    const facultadLabel = el("label", { text: "Facultad" });
-    setLabelStyle(facultadLabel);
-
-    const facultad = el("input", {
-      type: "text",
-      value: ""
-    });
-
-    setInputStyle(facultad);
-
-    const carreraLabel = el("label", { text: "Carrera" });
-    setLabelStyle(carreraLabel);
-
-    const carrera = el("input", {
-      type: "text",
-      value: ""
-    });
-
-    setInputStyle(carrera);
-
-    const materiaLabel = el("label", { text: "Materia" });
-    setLabelStyle(materiaLabel);
-
-    const materia = el("input", {
-      type: "text",
-      value: ""
-    });
-
-    setInputStyle(materia);
-
-    const fechaClaseLabel = el("label", {
-      text: "Fecha Clase"
-    });
-
-    setLabelStyle(fechaClaseLabel);
-
-    const fechaClase = el("input", {
-      type: "date",
-      value: ""
-    });
-
-    setInputStyle(fechaClase);
-
-    const horaInicioLabel = el("label", {
-      text: "Hora Inicio"
-    });
-
-    setLabelStyle(horaInicioLabel);
-
-    const horaIniciaClase = el("input", {
-      type: "time",
-      value: ""
-    });
-
-    setInputStyle(horaIniciaClase);
-
-    const horaFinLabel = el("label", {
-      text: "Hora Finalización"
-    });
-
-    setLabelStyle(horaFinLabel);
-
-    const horaTerminaClase = el("input", {
-      type: "time",
-      value: ""
-    });
-
-    setInputStyle(horaTerminaClase);
-
-    const msg = el("div");
-
-    setMessage(msg, "", "ok");
-
-    const primaryBtn = el("button", {
-      type: "button",
-      text:
-        mode === "create"
-          ? "Guardar"
-          : mode === "edit"
-          ? "Editar"
-          : "Eliminar"
-    });
-
-    setButtonStyle(primaryBtn);
-
-    const cancelBtn = el("button", {
-      type: "button",
-      text: "Cancelar"
-    });
-
-    setButtonStyle(cancelBtn);
-
-    cancelBtn.addEventListener("click", () => {
-      showView("menu");
-    });
-
-    primaryBtn.addEventListener("click", async () => {
-      const missing = validateRequired([
-        { name: "docente", value: docente.value },
-        { name: "facultad", value: facultad.value },
-        { name: "carrera", value: carrera.value },
-        { name: "materia", value: materia.value },
-        { name: "fechaClase", value: fechaClase.value },
-        { name: "horaIniciaClase", value: horaIniciaClase.value },
-        { name: "horaTerminaClase", value: horaTerminaClase.value }
-      ]);
-
-      if (missing.length) {
-        setMessage(
-          msg,
-          "Campos vacíos: " + missing.join(", "),
-          "error"
-        );
-
-        return;
-      }
-
-      const payload = {
-        docente: normalizeText(docente.value),
-        facultad: normalizeText(facultad.value),
-        carrera: normalizeText(carrera.value),
-        materia: normalizeText(materia.value),
-        fechaClase: normalizeText(fechaClase.value),
-        horaIniciaClase: normalizeText(horaIniciaClase.value),
-        horaTerminaClase: normalizeText(horaTerminaClase.value)
+  // Cliente API Fetch
+  async function realizarLlamadoAPI(metodo, endpoint, cuerpo) {
+      const configuracion = {
+          method: metodo,
+          headers: { "Content-Type": "application/json" }
       };
+      if (cuerpo !== undefined) configuracion.body = JSON.stringify(cuerpo);
 
-      try {
-        if (mode === "create") {
-          await apiJson(
-            "POST",
-            "/api/horarios_docentes",
-            payload
-          );
+      const respuesta = await fetch(endpoint, configuracion);
+      const json = await respuesta.json().catch(() => null);
 
-          setMessage(msg, "Horario creado.", "ok");
-
-          return;
-        }
-
-        if (mode === "edit") {
-          if (!state.edit.idHorario) {
-            setMessage(
-              msg,
-              "Debe seleccionar un horario.",
-              "error"
-            );
-
-            return;
-          }
-
-          await apiJson(
-            "PUT",
-            "/api/horarios_docentes/" +
-              encodeURIComponent(String(state.edit.idHorario)),
-            payload
-          );
-
-          setMessage(msg, "Horario editado.", "ok");
-
-          return;
-        }
-
-        if (mode === "delete") {
-          if (!state.edit.idHorario) {
-            setMessage(
-              msg,
-              "Debe seleccionar un horario.",
-              "error"
-            );
-
-            return;
-          }
-
-          await apiJson(
-            "DELETE",
-            "/api/horarios_docentes/" +
-              encodeURIComponent(String(state.edit.idHorario))
-          );
-
-          setMessage(msg, "Horario eliminado.", "ok");
-
-          return;
-        }
-      } catch (e) {
-        if (
-          e.data &&
-          Array.isArray(e.data.errors)
-        ) {
-          setMessage(
-            msg,
-            e.data.errors.join("\n"),
-            "error"
-          );
-        } else {
-          setMessage(msg, e.message, "error");
-        }
+      if (!respuesta.ok) {
+          const err = new Error(json && json.message ? json.message : "Error en comunicación con el servidor");
+          err.detalles = json;
+          throw err;
       }
-    });
-
-    form.appendChild(docenteLabel);
-    form.appendChild(docente);
-
-    form.appendChild(facultadLabel);
-    form.appendChild(facultad);
-
-    form.appendChild(carreraLabel);
-    form.appendChild(carrera);
-
-    form.appendChild(materiaLabel);
-    form.appendChild(materia);
-
-    form.appendChild(fechaClaseLabel);
-    form.appendChild(fechaClase);
-
-    form.appendChild(horaInicioLabel);
-    form.appendChild(horaIniciaClase);
-
-    form.appendChild(horaFinLabel);
-    form.appendChild(horaTerminaClase);
-
-    const buttonsRow = el("div");
-
-    buttonsRow.style.marginTop = "12px";
-
-    buttonsRow.appendChild(primaryBtn);
-    buttonsRow.appendChild(cancelBtn);
-
-    form.appendChild(buttonsRow);
-    form.appendChild(msg);
-
-    box.appendChild(form);
-
-    return box;
+      return json;
   }
 
-  function renderMenu() {
-    const box = el("div");
-
-    setBoxStyle(box);
-
-    const title = el("h2", {
-      text: "Administración Horarios Docentes"
-    });
-
-    setTitleStyle(title);
-
-    box.appendChild(title);
-
-    const btnCreate = el("button", {
-      type: "button",
-      text: "Crear Horario"
-    });
-
-    const btnEdit = el("button", {
-      type: "button",
-      text: "Editar Horario"
-    });
-
-    const btnDelete = el("button", {
-      type: "button",
-      text: "Eliminar Horario"
-    });
-
-    const btnList = el("button", {
-      type: "button",
-      text: "Listar Horarios"
-    });
-
-    setButtonStyle(btnCreate);
-    setButtonStyle(btnEdit);
-    setButtonStyle(btnDelete);
-    setButtonStyle(btnList);
-
-    btnCreate.addEventListener("click", () => {
-      showView("create");
-    });
-
-    btnEdit.addEventListener("click", () => {
-      showView("edit");
-    });
-
-    btnDelete.addEventListener("click", () => {
-      showView("delete");
-    });
-
-    btnList.addEventListener("click", () => {
-      showView("list");
-    });
-
-    const row = el("div");
-
-    row.style.textAlign = "center";
-
-    row.appendChild(btnCreate);
-    row.appendChild(btnEdit);
-    row.appendChild(btnDelete);
-    row.appendChild(btnList);
-
-    box.appendChild(row);
-
-    return box;
+  // Alertas de feedback integradas
+  function lanzarMensajeFeedback(zona, texto, esError = false) {
+      limpiarElemento(zona);
+      if (!texto) return;
+      const alerta = crearNodo("div", {
+          class: `alert ${esError ? 'alert-danger' : 'alert-success'} alert-dismissible fade show mt-3`,
+          role: "alert",
+          text: texto
+      });
+      zona.appendChild(alerta);
   }
 
-  function renderList() {
-    const box = el("div");
+  // ==========================================
+  // COMPONENTES DINÁMICOS (ZONA DERECHA)
+  // ==========================================
 
-    setBoxStyle(box);
+  function vistaBienvenida() {
+      const caja = crearNodo("div", { class: "text-center py-5" });
+      caja.appendChild(crearNodo("h1", { class: "welcome-title", text: "Bienvenido al Sistema de Horarios CIAF" }));
+      caja.appendChild(crearNodo("p", { class: "welcome-subtitle", text: "Seleccione una opción a la izquierda para comenzar." }));
+      return caja;
+  }
 
-    const title = el("h2", {
-      text: "Listado Horarios"
-    });
+  function componenteFormulario(modo) {
+      const contenedorForm = crearNodo("div", { class: "p-2" });
 
-    setTitleStyle(title);
+      let tituloForm = modo === "crear" ? "Crear horario" : modo === "editar" ? "Editar horario" : "Borrar horario";
+      contenedorForm.appendChild(crearNodo("h3", { class: "fw-bold text-dark mb-4", text: tituloForm }));
 
-    box.appendChild(title);
+      const bloqueAlertas = crearNodo("div", { class: "mb-3" });
+      contenedorForm.appendChild(bloqueAlertas);
 
-    const tableWrap = el("div");
+      // Barra de búsqueda para los modos Editar y Eliminar
+      if (modo === "editar" || modo === "borrar") {
+          const controlBusqueda = crearNodo("div", { class: "input-group mb-4" });
+          const inputId = crearNodo("input", { type: "number", class: "form-control", id: "buscarIdHorario", placeholder: "Escriba el idHorario..." });
+          const btnBuscar = crearNodo("button", { type: "button", class: "btn btn-outline-secondary px-4", text: "Buscar" });
 
-    tableWrap.style.overflowX = "auto";
+          controlBusqueda.appendChild(inputId);
+          controlBusqueda.appendChild(btnBuscar);
+          contenedorForm.appendChild(controlBusqueda);
 
-    const table = el("table");
+          btnBuscar.addEventListener("click", async () => {
+              const idValue = inputId.value.trim();
+              if (!idValue) {
+                  lanzarMensajeFeedback(bloqueAlertas, "Debe digitar el ID a buscar.", true);
+                  return;
+              }
+              try {
+                  const registro = await realizarLlamadoAPI("GET", `/api/horarios/byidHorario?idHorario=${idValue}`);
+                  if (!registro) {
+                      lanzarMensajeFeedback(bloqueAlertas, "El horario no existe.", true);
+                      return;
+                  }
+                  moduloEstado.idSeleccionado = idValue;
+                  document.getElementById("formDocente").value = registro.docente || "";
+                  document.getElementById("formFacultad").value = registro.facultad || "";
+                  document.getElementById("formCarrera").value = registro.carrera || "";
+                  document.getElementById("formMateria").value = registro.materia || "";
+                  document.getElementById("formFecha").value = registro.fechaClase || "";
+                  document.getElementById("formHoraInicia").value = registro.horaIniciaClase || "";
+                  document.getElementById("formHoraTermina").value = registro.horaTerminaClase || "";
 
-    table.style.width = "100%";
-    table.style.borderCollapse = "collapse";
+                  lanzarMensajeFeedback(bloqueAlertas, "Horario cargado.", false);
+              } catch (e) {
+                  lanzarMensajeFeedback(bloqueAlertas, e.message, true);
+              }
+          });
+      }
 
-    const thead = el("thead");
-    const trHead = el("tr");
+      // Estructura del Formulario
+      const formTag = crearNodo("form", { class: "row g-3" });
 
-    const headers = [
-      "idHorario",
-      "docente",
-      "facultad",
-      "carrera",
-      "materia",
-      "fechaClase",
-      "horaIniciaClase",
-      "horaTerminaClase"
-    ];
+      const campos = [
+          { id: "formDocente", label: "Docente", type: "text", disabled: (modo === "borrar") },
+          { id: "formFacultad", label: "Facultad", type: "text", disabled: (modo === "borrar") },
+          { id: "formCarrera", label: "Carrera", type: "text", disabled: (modo === "borrar") },
+          { id: "formMateria", label: "Materia", type: "text", disabled: (modo === "borrar") },
+          { id: "formFecha", label: "Fecha Clase", type: "date", disabled: (modo === "borrar") },
+          { id: "formHoraInicia", label: "Hora Inicia Clase", type: "time", disabled: (modo === "borrar") },
+          { id: "formHoraTermina", label: "Hora Termina Clase", type: "time", disabled: (modo === "borrar") }
+      ];
 
-    for (const h of headers) {
-      const th = el("th", { text: h });
+      campos.forEach(c => {
+          const divCol = crearNodo("div", { class: "col-md-6" });
+          divCol.appendChild(crearNodo("label", { class: "form-label fw-semibold small text-secondary", text: c.label, for: c.id }));
 
-      th.style.border = "1px solid #ffffff";
-      th.style.padding = "8px";
+          const paramsInput = { type: c.type, class: "form-control", id: c.id };
+          if (c.disabled) paramsInput.disabled = "true";
 
-      trHead.appendChild(th);
-    }
+          divCol.appendChild(crearNodo("input", paramsInput));
+          formTag.appendChild(divCol);
+      });
 
-    thead.appendChild(trHead);
+      // Botones de acción inferior
+      const divBotones = crearNodo("div", { class: "col-12 d-flex gap-2 mt-4" });
+      let textoPrincipal = modo === "crear" ? "Guardar" : modo === "editar" ? "Editar" : "Eliminar";
+      let colorBtn = modo === "crear" ? "btn-success" : modo === "editar" ? "btn-warning text-white" : "btn-danger";
 
-    const tbody = el("tbody");
+      const btnSubmit = crearNodo("button", { type: "button", class: `btn ${colorBtn} px-4 fw-bold`, text: textoPrincipal });
+      const btnCancel = crearNodo("button", { type: "button", class: "btn btn-light px-4 border", text: "Cancelar" });
 
-    async function load() {
-      try {
-        const data = await apiJson(
-          "GET",
-          "/api/horarios_docentes/list"
-        );
+      divBotones.appendChild(btnSubmit);
+      divBotones.appendChild(btnCancel);
+      formTag.appendChild(divBotones);
+      contenedorForm.appendChild(formTag);
 
-        const horarios = Array.isArray(data.horarios_docentes)
-          ? data.horarios_docentes
-          : [];
+      // Controladores de eventos
+      btnCancel.addEventListener("click", () => {
+          formTag.reset();
+          limpiarElemento(bloqueAlertas);
+          transicionarModulo("inicio");
+      });
 
-        clearNode(tbody);
-
-        for (const h of horarios) {
-          const tr = el("tr");
-
-          const values = [
-            h.idHorario,
-            h.docente,
-            h.facultad,
-            h.carrera,
-            h.materia,
-            h.fechaClase,
-            h.horaIniciaClase,
-            h.horaTerminaClase
-          ];
-
-          for (const v of values) {
-            const td = el("td", {
-              text:
-                v === null || v === undefined
-                  ? ""
-                  : String(v)
-            });
-
-            td.style.border = "1px solid #ffffff";
-            td.style.padding = "8px";
-
-            tr.appendChild(td);
+      btnSubmit.addEventListener("click", async () => {
+          if (modo === "borrar") {
+              if (!moduloEstado.idSeleccionado) {
+                  lanzarMensajeFeedback(bloqueAlertas, "Debe buscar una identificación existente antes de eliminar.", true);
+                  return;
+              }
+              if (confirm("¿Está seguro de Borrar el registro?")) {
+                  try {
+                      await realizarLlamadoAPI("DELETE", "/api/horarios/by-idHorario", { idHorario: moduloEstado.idSeleccionado });
+                      lanzarMensajeFeedback(bloqueAlertas, "Horario borrado.", false);
+                      btnSubmit.setAttribute("disabled", "true");
+                      setTimeout(() => { transicionarModulo("inicio"); }, 1500);
+                  } catch (err) { lanzarMensajeFeedback(bloqueAlertas, err.message, true); }
+              }
+              return;
           }
 
-          tbody.appendChild(tr);
-        }
-      } catch (e) {
-        console.error(e);
+          if (modo === "editar" && !moduloEstado.idSeleccionado) {
+              lanzarMensajeFeedback(bloqueAlertas, "Debe buscar un horario existente para editar.", true);
+              return;
+          }
+
+          const payload = {
+              docente: document.getElementById("formDocente").value.trim(),
+              facultad: document.getElementById("formFacultad").value.trim(),
+              carrera: document.getElementById("formCarrera").value.trim(),
+              materia: document.getElementById("formMateria").value.trim(),
+              fechaClase: document.getElementById("formFecha").value.trim(),
+              horaIniciaClase: document.getElementById("formHoraInicia").value.trim(),
+              horaTerminaClase: document.getElementById("formHoraTermina").value.trim()
+          };
+
+          if (Object.values(payload).some(v => !v)) {
+              lanzarMensajeFeedback(bloqueAlertas, "Debes completar los datos del formulario", true);
+              return;
+          }
+
+          if (modo === "editar" && !confirm("¿Está seguro de Editar el registro?")) {
+              formTag.reset();
+              return;
+          }
+
+          try {
+              if (modo === "crear") {
+                  await realizarLlamadoAPI("POST", "/api/horarios", payload);
+                  lanzarMensajeFeedback(bloqueAlertas, "Registro creado.", false);
+              } else if (modo === "editar") {
+                  await realizarLlamadoAPI("PUT", `/api/horarios/${moduloEstado.idSeleccionado}`, payload);
+                  lanzarMensajeFeedback(bloqueAlertas, "Horario editado.", false);
+              }
+              btnSubmit.setAttribute("disabled", "true");
+              setTimeout(() => { transicionarModulo("inicio"); }, 1500);
+          } catch (ex) {
+              if (ex.detalles && Array.isArray(ex.detalles.errors)) {
+                  lanzarMensajeFeedback(bloqueAlertas, ex.detalles.errors.join(", "), true);
+              } else {
+                  lanzarMensajeFeedback(bloqueAlertas, ex.message, true);
+              }
+          }
+      });
+
+      return contenedorForm;
+  }
+
+  function componenteTablaListado() {
+      const moduloListado = crearNodo("div", { class: "p-2" });
+      moduloListado.appendChild(crearNodo("h3", { class: "fw-bold text-dark mb-4", text: "Listado de horarios" }));
+
+      // Controles de filtros
+      const filaFiltros = crearNodo("div", { class: "row g-2 mb-3" });
+
+      const colSel = crearNodo("div", { class: "col-sm-4" });
+      const selectOrd = crearNodo("select", { class: "form-select form-select-sm" });
+      [["idHorario", "Ordenar por ID"], ["docente", "Ordenar por Docente"], ["materia", "Ordenar por Materia"]].forEach(i => {
+          selectOrd.appendChild(crearNodo("option", { value: i[0], text: i[1] }));
+      });
+      selectOrd.value = moduloEstado.filtrosTable.ordenador;
+      colSel.appendChild(selectOrd);
+
+      const colInp = crearNodo("div", { class: "col-sm-6" });
+      const inputBusq = crearNodo("input", { type: "text", class: "form-control form-control-sm", placeholder: "Escribe término de búsqueda...", value: moduloEstado.filtrosTable.buscarTermino });
+      colInp.appendChild(inputBusq);
+
+      const colBtn = crearNodo("div", { class: "col-sm-2" });
+      const btnFiltrar = crearNodo("button", { type: "button", class: "btn btn-sm btn-primary w-100 fw-bold", text: "Buscar" });
+      colBtn.appendChild(btnFiltrar);
+
+      filaFiltros.appendChild(colSel);
+      filaFiltros.appendChild(colInp);
+      filaFiltros.appendChild(colBtn);
+      moduloListado.appendChild(filaFiltros);
+
+      // Tabla estructurada
+      const divTabla = crearNodo("div", { class: "table-responsive border rounded bg-white" });
+      const tablaHTML = crearNodo("table", { class: "table table-hover table-striped mb-0 align-middle small" });
+      const thead = crearNodo("thead", { class: "table-light" });
+      const trh = crearNodo("tr");
+
+      ["ID", "Docente", "Facultad", "Carrera", "Materia", "Fecha", "Inicia", "Termina"].forEach(t => {
+          trh.appendChild(crearNodo("th", { text: t, class: "p-3" }));
+      });
+      thead.appendChild(trh);
+      tablaHTML.appendChild(thead);
+
+      const tbody = crearNodo("tbody");
+      tablaHTML.appendChild(tbody);
+      divTabla.appendChild(tablaHTML);
+      moduloListado.appendChild(divTabla);
+
+      // Barra inferior
+      const footerListado = crearNodo("div", { class: "d-flex justify-content-between align-items-center mt-3" });
+      const txtConteo = crearNodo("span", { class: "text-muted small fw-bold", id: "lblConteo", text: "Registros: 0" });
+      const btnCerrarListado = crearNodo("button", { type: "button", class: "btn btn-sm btn-secondary px-3", text: "Cerrar" });
+
+      footerListado.appendChild(txtConteo);
+      footerListado.appendChild(btnCerrarListado);
+      moduloListado.appendChild(footerListado);
+
+      btnCerrarListado.addEventListener("click", () => transicionarModulo("inicio"));
+
+      async function cargarDatosEfectivos() {
+          selectOrd.setAttribute("disabled", "true");
+          inputBusq.setAttribute("disabled", "true");
+          btnFiltrar.setAttribute("disabled", "true");
+
+          try {
+              const query = `orderBy=${moduloEstado.filtrosTable.ordenador}&q=${encodeURIComponent(moduloEstado.filtrosTable.buscarTermino)}`;
+              const resList = await realizarLlamadoAPI("GET", `/api/horarios/list?${query}`);
+
+              limpiarElemento(tbody);
+              const arrayHorarios = resList && Array.isArray(resList.horarios) ? resList.horarios : [];
+              txtConteo.textContent = `Registros: ${arrayHorarios.length}`;
+
+              if (arrayHorarios.length === 0) {
+                  const trVacio = crearNodo("tr");
+                  trVacio.appendChild(crearNodo("td", { colspan: "8", class: "text-center text-muted py-4", text: "No hay registros para mostrar." }));
+                  tbody.appendChild(trVacio);
+              } else {
+                  arrayHorarios.forEach(item => {
+                      const trData = crearNodo("tr");
+                      trData.appendChild(crearNodo("td", { text: item.idHorario, class: "p-3 fw-bold text-primary" }));
+                      trData.appendChild(crearNodo("td", { text: item.docente }));
+                      trData.appendChild(crearNodo("td", { text: item.facultad }));
+                      trData.appendChild(crearNodo("td", { text: item.carrera }));
+                      trData.appendChild(crearNodo("td", { text: item.materia }));
+                      trData.appendChild(crearNodo("td", { text: item.fechaClase }));
+                      trData.appendChild(crearNodo("td", { text: item.horaIniciaClase }));
+                      trData.appendChild(crearNodo("td", { text: item.horaTerminaClase }));
+                      tbody.appendChild(trData);
+                  });
+              }
+          } catch (err) {
+              console.error(err);
+          } finally {
+              selectOrd.removeAttribute("disabled");
+              inputBusq.removeAttribute("disabled");
+              btnFiltrar.removeAttribute("disabled");
+          }
       }
-    }
 
-    table.appendChild(thead);
-    table.appendChild(tbody);
+      btnFiltrar.addEventListener("click", () => {
+          moduloEstado.filtrosTable.ordenador = selectOrd.value;
+          moduloEstado.filtrosTable.buscarTermino = inputBusq.value.trim();
+          cargarDatosEfectivos();
+      });
 
-    tableWrap.appendChild(table);
+      inputBusq.addEventListener("keyup", (e) => {
+          if (e.key === "Enter") {
+              moduloEstado.filtrosTable.ordenador = selectOrd.value;
+              moduloEstado.filtrosTable.buscarTermino = inputBusq.value.trim();
+              cargarDatosEfectivos();
+          }
+      });
 
-    box.appendChild(tableWrap);
-
-    const closeBtn = el("button", {
-      type: "button",
-      text: "Volver"
-    });
-
-    setButtonStyle(closeBtn);
-
-    closeBtn.addEventListener("click", () => {
-      showView("menu");
-    });
-
-    box.appendChild(closeBtn);
-
-    load();
-
-    return box;
+      cargarDatosEfectivos();
+      return moduloListado;
   }
 
-  function render() {
-    setGlobalDarkMode();
+  function componenteVistaSalida() {
+      const divExit = crearNodo("div", { class: "text-center py-5" });
+      divExit.appendChild(crearNodo("h4", { class: "text-danger fw-bold mb-3", text: "Sesión Finalizada" }));
+      divExit.appendChild(crearNodo("p", { class: "text-muted mb-4", text: "Puede cerrar esta pestaña/ventana del navegador para finalizar." }));
 
-    clearNode(app);
+      const btnRegresar = crearNodo("button", { type: "button", class: "btn btn-sm btn-outline-primary px-4", text: "Volver al menú" });
+      btnRegresar.addEventListener("click", () => transicionarModulo("inicio"));
 
-    if (state.view === "menu") {
-      app.appendChild(renderMenu());
-    } else if (state.view === "create") {
-      app.appendChild(buildHorarioForm({ mode: "create" }));
-    } else if (state.view === "edit") {
-      app.appendChild(buildHorarioForm({ mode: "edit" }));
-    } else if (state.view === "delete") {
-      app.appendChild(buildHorarioForm({ mode: "delete" }));
-    } else if (state.view === "list") {
-      app.appendChild(renderList());
-    }
+      divExit.appendChild(btnRegresar);
+      return divExit;
   }
 
-  render();
+  // ==========================================
+  // ORQUESTADOR DE INTERFAZ GENERAL (SPA)
+  // ==========================================
+
+  function renderizarEstructuraBase() {
+      limpiarElemento(appContainer);
+
+      // 1. Navbar Superior Institucional
+      const headerNav = crearNodo("header", { class: "navbar-custom d-flex justify-content-between align-items-center" });
+
+      const marcaInstitucional = crearNodo("div", { class: "brand-text" });
+      marcaInstitucional.appendChild(crearNodo("i", { class: "bi bi-journal-bookmark-fill" }));
+      marcaInstitucional.appendChild(crearNodo("span", { text: "Administración de Horarios" }));
+      headerNav.appendChild(marcaInstitucional);
+
+      const bloqueUsuario = crearNodo("div", { class: "user-area" });
+      bloqueUsuario.appendChild(crearNodo("span", { html: "Bienvenido, <span class='fw-bold'>Docente</span>" }));
+      const btnNavSalir = crearNodo("button", { class: "btn-salir" });
+      btnNavSalir.appendChild(crearNodo("i", { class: "bi bi-box-arrow-right" }));
+      btnNavSalir.appendChild(crearNodo("span", { text: "Salir" }));
+      btnNavSalir.addEventListener("click", () => transicionarModulo("salir"));
+      bloqueUsuario.appendChild(btnNavSalir);
+      headerNav.appendChild(bloqueUsuario);
+
+      appContainer.appendChild(headerNav);
+
+      // 2. Layout Principal de Dos Columnas
+      const rowLayout = crearNodo("div", { class: "container-fluid mt-4" });
+      const gridLayout = crearNodo("div", { class: "row g-4" });
+
+      // COLUMNA IZQUIERDA: Sidebar
+      const colIzquierda = crearNodo("div", { class: "col-lg-3 col-md-4" });
+      const cardSidebar = crearNodo("div", { class: "sidebar-card" });
+
+      cardSidebar.appendChild(crearNodo("h6", { class: "menu-title", text: "Menú Principal" }));
+
+      const listaGrupo = crearNodo("div", { class: "list-group list-group-flush" });
+
+      const rutasMenu = [
+          { clave: "crear", etiqueta: "Crear horario", icono: "bi-plus-circle", iconClass: "icon-crear" },
+          { clave: "editar", etiqueta: "Editar horario", icono: "bi-pencil", iconClass: "icon-editar" },
+          { clave: "borrar", etiqueta: "Borrar horario", icono: "bi-trash", iconClass: "icon-borrar" },
+          { clave: "listar", etiqueta: "Listado de horarios", icono: "bi-table", iconClass: "icon-listar" }
+      ];
+
+      rutasMenu.forEach(item => {
+          const esActivo = moduloEstado.vistaActiva === item.clave;
+          const linkMenu = crearNodo("button", {
+              type: "button",
+              class: `list-group-item ${esActivo ? 'active' : ''}`
+          });
+
+          linkMenu.appendChild(crearNodo("i", { class: `bi ${item.icono} ${esActivo ? '' : item.iconClass}` }));
+          linkMenu.appendChild(crearNodo("span", { text: item.etiqueta }));
+
+          linkMenu.addEventListener("click", () => transicionarModulo(item.clave));
+          listaGrupo.appendChild(linkMenu);
+      });
+
+      cardSidebar.appendChild(listaGrupo);
+
+      // Footer del sidebar con ícono de info
+      const footerSidebar = crearNodo("p", { class: "sidebar-footer" });
+      footerSidebar.appendChild(crearNodo("i", { class: "bi bi-info-circle" }));
+      footerSidebar.appendChild(document.createTextNode(" Selecciona una opción del menú."));
+      cardSidebar.appendChild(footerSidebar);
+
+      colIzquierda.appendChild(cardSidebar);
+      gridLayout.appendChild(colIzquierda);
+
+      // COLUMNA DERECHA: Contenedor Central
+      const colDerecha = crearNodo("div", { class: "col-lg-9 col-md-8" });
+      const panelContenedorCentral = crearNodo("div", { class: "main-panel" });
+
+      switch (moduloEstado.vistaActiva) {
+          case "inicio":
+              panelContenedorCentral.appendChild(vistaBienvenida());
+              break;
+          case "crear":
+              panelContenedorCentral.appendChild(componenteFormulario("crear"));
+              break;
+          case "editar":
+              panelContenedorCentral.appendChild(componenteFormulario("editar"));
+              break;
+          case "borrar":
+              panelContenedorCentral.appendChild(componenteFormulario("borrar"));
+              break;
+          case "listar":
+              panelContenedorCentral.appendChild(componenteTablaListado());
+              break;
+          case "salir":
+              panelContenedorCentral.appendChild(componenteVistaSalida());
+              break;
+          default:
+              panelContenedorCentral.appendChild(vistaBienvenida());
+      }
+
+      colDerecha.appendChild(panelContenedorCentral);
+      gridLayout.appendChild(colDerecha);
+      rowLayout.appendChild(gridLayout);
+      appContainer.appendChild(rowLayout);
+  }
+
+  // Inicializar aplicación SPA al cargar
+  renderizarEstructuraBase();
 })();
