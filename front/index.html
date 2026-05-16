@@ -1,0 +1,13 @@
+<!doctype html> <!-- Declara el tipo de documento HTML5 para que el navegador use el modo estándar (no quirks). -->
+<html lang="es"> <!-- Elemento raíz del documento; lang="es" ayuda a accesibilidad, correctores y motores de búsqueda. -->
+  <head> <!-- Cabecera: metadatos, título y recursos; no se renderiza como contenido principal. -->
+    <meta charset="utf-8" /> <!-- Define UTF-8 para soportar caracteres en español (tildes, ñ) sin corrupción. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" /> <!-- Ajusta el viewport en móviles para una escala correcta. -->
+    <title>Administración de Horarios</title> <!-- Texto que aparece en la pestaña del navegador y en marcadores. -->
+  </head> <!-- Cierra la sección head. -->
+  <body> <!-- Cuerpo: aquí vive el contenido visible y el contenedor de la app. -->
+    <div id="app"></div> <!-- Nodo “raíz” donde app.js inyecta/crea toda la UI con DOM API (sin frameworks). -->
+    <noscript>Este aplicativo requiere JavaScript habilitado.</noscript> <!-- Mensaje fallback si el usuario deshabilita JS. -->
+    <script src="/app.js"></script> <!-- Carga el script principal; al ser archivo externo reduce riesgo de XSS vs inline scripts. -->
+  </body> <!-- Cierra el body. -->
+</html> <!-- Cierra el documento HTML. -->
