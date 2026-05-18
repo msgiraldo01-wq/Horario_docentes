@@ -1,4 +1,18 @@
 const express = require("express");
+const { pool } = require("./db");
+
+const {
+    createHorario,
+    updateHorario,
+    deleteHorario,
+    findHorarioById,
+    listHorarios
+} = require("./horariosDocentesRepository");
+
+const {
+    validateHorarioPayload
+} = require("./validation");
+
 const path = require("path");
 const cors = require("cors");
 
@@ -36,176 +50,280 @@ app.get("/api/health", (req, res) => {
    LISTA TEMPORAL
 ========================= */
 
-let horarios = [];
+/*let horarios = [];
 
 /* =========================
    CREAR HORARIO
 ========================= */
 
-app.post("/api/horarios", (req, res) => {
+app.post("/api/horarios", async (req, res) => {
 
-    const {
-        docente,
-        facultad,
-        carrera,
-        materia,
-        fechaClase,
-        horaIniciaClase,
-        horaTerminaClase
-    } = req.body;
+    const validation =
+        validateHorarioPayload(req.body);
 
-    let errores = [];
+    if (!validation.ok) {
 
-    if (!docente) errores.push("Docente requerido");
-    if (!facultad) errores.push("Facultad requerida");
-    if (!carrera) errores.push("Carrera requerida");
-    if (!materia) errores.push("Materia requerida");
-    if (!fechaClase) errores.push("Fecha requerida");
-
-    if (errores.length > 0) {
         return res.status(400).json({
-            errors: errores
+            errors: validation.errors
         });
     }
 
-    const existe = horarios.find(h =>
-        h.docente === docente &&
-        h.facultad === facultad &&
-        h.carrera === carrera &&
-        h.materia === materia
-    );
+    const connection = await pool.getConnection();
 
-    if (existe) {
-        return res.status(409).json({
-            message: "El horario ya existe."
+    try {
+
+        const horario =
+            await createHorario(
+                connection,
+                validation.value
+            );
+
+        res.json({
+            message: "Registro creado.",
+            horario
         });
+
+    } catch (error) {
+
+        if (error.code === "HORARIO_SOLAPADO") {
+
+            return res.status(409).json({
+                message: error.message
+            });
+        }
+
+        console.error(error);
+
+        res.status(500).json({
+            message: "Error interno"
+        });
+
+    } finally {
+
+        connection.release();
+
     }
 
-    const nuevo = {
-        idHorario: horarios.length + 1,
-        docente,
-        facultad,
-        carrera,
-        materia,
-        fechaClase,
-        horaIniciaClase,
-        horaTerminaClase
-    };
-
-    horarios.push(nuevo);
-
-    res.json({
-        message: "Registro creado."
-    });
 });
 
 /* =========================
    LISTAR
 ========================= */
 
-app.get("/api/horarios/list", (req, res) => {
+app.get("/api/horarios/list", async (req, res) => {
 
-    const { orderBy, q } = req.query;
+    const connection = await pool.getConnection();
 
-    let lista = [...horarios];
+    try {
 
-    if (q) {
-        lista = lista.filter(h =>
-            h.docente.toLowerCase().includes(q.toLowerCase()) ||
-            h.materia.toLowerCase().includes(q.toLowerCase())
-        );
+        const horarios =
+            await listHorarios(connection);
+
+        res.json({
+            horarios
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            message: "Error interno"
+        });
+
+    } finally {
+
+        connection.release();
+
     }
 
-    if (orderBy) {
-        lista.sort((a, b) =>
-            String(a[orderBy]).localeCompare(String(b[orderBy]))
-        );
-    }
-
-    res.json({
-        horarios: lista
-    });
 });
 
 /* =========================
    BUSCAR POR ID
 ========================= */
 
-app.get("/api/horarios/byidHorario", (req, res) => {
+app.get("/api/horarios/byidHorario", async (req, res) => {
 
     const { idHorario } = req.query;
 
-    const horario = horarios.find(
-        h => h.idHorario == idHorario
-    );
+    if (!idHorario) {
 
-    if (!horario) {
-        return res.status(404).json({
-            message: "Horario No existe"
+        return res.status(400).json({
+            message: "idHorario inválido"
         });
     }
 
-    res.json(horario);
+    const connection = await pool.getConnection();
+
+    try {
+
+        const horario =
+            await findHorarioById(
+                connection,
+                idHorario
+            );
+
+        if (!horario) {
+
+            return res.status(404).json({
+                message: "Horario No existe"
+            });
+        }
+
+        res.json(horario);
+
+    } catch (error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            message: "Error interno"
+        });
+
+    } finally {
+
+        connection.release();
+
+    }
+
 });
 
 /* =========================
    EDITAR
 ========================= */
 
-app.put("/api/horarios/:id", (req, res) => {
+app.put("/api/horarios/:id", async (req, res) => {
 
-    const id = req.params.id;
+    const validation =
+        validateHorarioPayload(req.body);
 
-    const index = horarios.findIndex(
-        h => h.idHorario == id
-    );
+    if (!validation.ok) {
 
-    if (index === -1) {
-        return res.status(404).json({
-            message: "Horario no encontrado"
+        return res.status(400).json({
+            errors: validation.errors
         });
     }
 
-    horarios[index] = {
-        ...horarios[index],
-        ...req.body
-    };
+    const connection = await pool.getConnection();
 
-    res.json({
-        message: "Horario editado."
-    });
+    try {
+
+        const horario =
+            await updateHorario(
+                connection,
+                req.params.id,
+                validation.value
+            );
+
+        res.json({
+            message: "Horario editado.",
+            horario
+        });
+
+    } catch (error) {
+
+        if (error.code === "NOT_FOUND") {
+
+            return res.status(404).json({
+                message: error.message
+            });
+        }
+
+        if (error.code === "HORARIO_SOLAPADO") {
+
+            return res.status(409).json({
+                message: error.message
+            });
+        }
+
+        console.error(error);
+
+        res.status(500).json({
+            message: "Error interno"
+        });
+
+    } finally {
+
+        connection.release();
+
+    }
+
 });
 
 /* =========================
    BORRAR
 ========================= */
 
-app.delete("/api/horarios/by-idHorario", (req, res) => {
+app.delete("/api/horarios/by-idHorario", async (req, res) => {
 
     const { idHorario } = req.body;
 
-    const index = horarios.findIndex(
-        h => h.idHorario == idHorario
-    );
+    if (!idHorario) {
 
-    if (index === -1) {
-        return res.status(404).json({
-            message: "Horario no existe"
+        return res.status(400).json({
+            message: "idHorario inválido"
         });
     }
 
-    horarios.splice(index, 1);
+    const connection = await pool.getConnection();
 
-    res.json({
-        message: "Horario borrado."
-    });
+    try {
+
+        await deleteHorario(
+            connection,
+            idHorario
+        );
+
+        res.json({
+            message: "Horario borrado."
+        });
+
+    } catch (error) {
+
+        if (error.code === "NOT_FOUND") {
+
+            return res.status(404).json({
+                message: error.message
+            });
+        }
+
+        console.error(error);
+
+        res.status(500).json({
+            message: "Error interno"
+        });
+
+    } finally {
+
+        connection.release();
+
+    }
+
 });
 
 /* =========================
    INICIAR SERVIDOR
 ========================= */
 
-app.listen(8080, "127.0.0.1", () => {
+app.listen(8080, "127.0.0.1", async () => {
+
     console.log("Servidor iniciado:");
     console.log("http://127.0.0.1:8080");
+
+    try {
+
+        const connection = await pool.getConnection();
+
+        console.log("✅ MYSQL CONECTADO CORRECTAMENTE");
+
+        connection.release();
+
+    } catch (error) {
+
+        console.error("❌ ERROR MYSQL:");
+        console.error(error.message);
+
+    }
+
 });

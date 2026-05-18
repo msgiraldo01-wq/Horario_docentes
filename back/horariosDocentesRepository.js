@@ -106,8 +106,18 @@ async function createHorario(connection, horario) {
     }
 
     const [result] = await connection.execute(
-      `INSERT INTO horarios_docentes (docente, facultad, carrera, materia, fechaClase, horaIniciaClase, horaTerminaClase)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+      `
+        INSERT INTO horarios_docentes
+        (
+          docente,
+          facultad,
+          carrera,
+          materia,
+          fechaClase,
+          horaIniciaClase,
+          horaTerminaClase
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       [
         horario.docente,
@@ -182,33 +192,25 @@ async function deleteHorario(connection, idHorario) {
   });
 }
 
-async function listHorarios(connection,
-  { docente, fechaClase } = {}
-) {
-  return withReadLock(connection, async () => {
-    let sql = `SELECT idHorario, docente, facultad, carrera, materia, fechaClase, horaIniciaClase, horaTerminaClase, FROM horarios_docentes WHERE 1 = 1`;
+async function listHorarios(connection) {
 
-    const params = [];
+  const [rows] = await connection.execute(
+    `
+      SELECT
+        idHorario,
+        docente,
+        facultad,
+        carrera,
+        materia,
+        fechaClase,
+        horaIniciaClase,
+        horaTerminaClase
+      FROM horarios_docentes
+      ORDER BY fechaClase ASC, horaIniciaClase ASC
+    `
+  );
 
-    // Filtro opcional por docente
-    if (docente) {
-      sql += " AND docente LIKE ?";
-      params.push("%" + docente + "%");
-    }
-
-    // Filtro opcional por fecha
-    if (fechaClase) {
-      sql += " AND fechaClase = ?";
-      params.push(fechaClase);
-    }
-
-    sql += `ORDER BY fechaClase ASC, horaIniciaClase ASC`;
-
-    const [rows] =
-      await connection.execute(sql, params);
-
-    return rows;
-  });
+  return rows;
 }
 
 module.exports = {

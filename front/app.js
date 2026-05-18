@@ -117,7 +117,11 @@
                   document.getElementById("formFacultad").value = registro.facultad || "";
                   document.getElementById("formCarrera").value = registro.carrera || "";
                   document.getElementById("formMateria").value = registro.materia || "";
-                  document.getElementById("formFecha").value = registro.fechaClase || "";
+                  document.getElementById("formFecha").value =
+                    registro.fechaClase
+                        ? registro.fechaClase.split("T")[0]
+                        : "";
+
                   document.getElementById("formHoraInicia").value = registro.horaIniciaClase || "";
                   document.getElementById("formHoraTermina").value = registro.horaTerminaClase || "";
 
@@ -318,8 +322,20 @@
                       trData.appendChild(crearNodo("td", { text: item.carrera }));
                       trData.appendChild(crearNodo("td", { text: item.materia }));
                       trData.appendChild(crearNodo("td", { text: item.fechaClase }));
-                      trData.appendChild(crearNodo("td", { text: item.horaIniciaClase }));
-                      trData.appendChild(crearNodo("td", { text: item.horaTerminaClase }));
+                      trData.appendChild(
+                        crearNodo("td", {
+                            text: item.horaIniciaClase
+                                ? item.horaIniciaClase.substring(0,5)
+                                : ""
+                        })
+                    );
+                    trData.appendChild(
+                        crearNodo("td", {
+                            text: item.horaTerminaClase
+                                ? item.horaTerminaClase.substring(0,5)
+                                : ""
+                        })
+                    );
                       tbody.appendChild(trData);
                   });
               }
