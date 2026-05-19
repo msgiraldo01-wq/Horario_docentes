@@ -1,7 +1,7 @@
 /**
  * Utilidades HTTP (sin frameworks).
  *
- * Seguridad:
+ * Protección:
  * - Límite de tamaño del body JSON para mitigar DoS básico por payloads grandes.
  * - Respuestas de error sanitizadas para no filtrar detalles internos.
  */

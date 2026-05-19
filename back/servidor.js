@@ -1,45 +1,37 @@
 const express = require("express");
-const { pool } = require("./db");
+const { connectionPool } = require("./conectorDb");
 
-const {
-    createHorario,
-    updateHorario,
-    deleteHorario,
-    findHorarioById,
-    listHorarios
-} = require("./horariosDocentesRepository");
+const { registerSchedule, editSchedule, removeSchedule, searchScheduleById, fetchSchedules } = require("./repositorioHorarios");
 
-const {
-    validateHorarioPayload
-} = require("./validation");
+const { checkSchedulePayload } = require("./validadorInput");
 
 const path = require("path");
 const cors = require("cors");
 
-const app = express();
+const serverApplication = express();
 
-app.use(cors());
-app.use(express.json());
+serverApplication.use(cors());
+serverApplication.use(express.json());
 
 /* =========================
    SERVIR FRONTEND
 ========================= */
 
-app.use(express.static(path.join(__dirname, "../front")));
+serverApplication.use(express.static(path.join(__dirname, "../front")));
 
 /* =========================
    RUTA PRINCIPAL
 ========================= */
 
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "../front/index.html"));
+serverApplication.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "../front/home.html"));
 });
 
 /* =========================
    API HEALTH
 ========================= */
 
-app.get("/api/health", (req, res) => {
+serverApplication.get("/api/health", (req, res) => {
     res.json({
         ok: true,
         message: "Servidor funcionando correctamente"
@@ -47,19 +39,13 @@ app.get("/api/health", (req, res) => {
 });
 
 /* =========================
-   LISTA TEMPORAL
-========================= */
-
-/*let horarios = [];
-
-/* =========================
    CREAR HORARIO
 ========================= */
 
-app.post("/api/horarios", async (req, res) => {
+serverApplication.post("/api/horarios", async (req, res) => {
 
     const validation =
-        validateHorarioPayload(req.body);
+        checkSchedulePayload(req.body);
 
     if (!validation.ok) {
 
@@ -68,12 +54,11 @@ app.post("/api/horarios", async (req, res) => {
         });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await connectionPool.getConnection();
 
     try {
-
         const horario =
-            await createHorario(
+            await registerSchedule(
                 connection,
                 validation.value
             );
@@ -110,14 +95,13 @@ app.post("/api/horarios", async (req, res) => {
    LISTAR
 ========================= */
 
-app.get("/api/horarios/list", async (req, res) => {
+serverApplication.get("/api/horarios/list", async (req, res) => {
 
-    const connection = await pool.getConnection();
+    const connection = await connectionPool.getConnection();
 
     try {
-
         const horarios =
-            await listHorarios(connection);
+            await fetchSchedules(connection);
 
         res.json({
             horarios
@@ -143,7 +127,7 @@ app.get("/api/horarios/list", async (req, res) => {
    BUSCAR POR ID
 ========================= */
 
-app.get("/api/horarios/byidHorario", async (req, res) => {
+serverApplication.get("/api/horarios/byidHorario", async (req, res) => {
 
     const { idHorario } = req.query;
 
@@ -154,12 +138,12 @@ app.get("/api/horarios/byidHorario", async (req, res) => {
         });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await connectionPool.getConnection();
 
     try {
 
         const horario =
-            await findHorarioById(
+            await searchScheduleById(
                 connection,
                 idHorario
             );
@@ -184,19 +168,15 @@ app.get("/api/horarios/byidHorario", async (req, res) => {
     } finally {
 
         connection.release();
-
     }
-
 });
-
 /* =========================
    EDITAR
 ========================= */
-
-app.put("/api/horarios/:id", async (req, res) => {
+serverApplication.put("/api/horarios/:id", async (req, res) => {
 
     const validation =
-        validateHorarioPayload(req.body);
+        checkSchedulePayload(req.body);
 
     if (!validation.ok) {
 
@@ -205,12 +185,12 @@ app.put("/api/horarios/:id", async (req, res) => {
         });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await connectionPool.getConnection();
 
     try {
 
         const horario =
-            await updateHorario(
+            await editSchedule(
                 connection,
                 req.params.id,
                 validation.value
@@ -255,7 +235,7 @@ app.put("/api/horarios/:id", async (req, res) => {
    BORRAR
 ========================= */
 
-app.delete("/api/horarios/by-idHorario", async (req, res) => {
+serverApplication.delete("/api/horarios/by-idHorario", async (req, res) => {
 
     const { idHorario } = req.body;
 
@@ -266,11 +246,11 @@ app.delete("/api/horarios/by-idHorario", async (req, res) => {
         });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await connectionPool.getConnection();
 
     try {
 
-        await deleteHorario(
+        await removeSchedule(
             connection,
             idHorario
         );
@@ -306,14 +286,14 @@ app.delete("/api/horarios/by-idHorario", async (req, res) => {
    INICIAR SERVIDOR
 ========================= */
 
-app.listen(8080, "127.0.0.1", async () => {
+serverApplication.listen(8080, "127.0.0.1", async () => {
 
     console.log("Servidor iniciado:");
     console.log("http://127.0.0.1:8080");
 
     try {
 
-        const connection = await pool.getConnection();
+        const connection = await connectionPool.getConnection();
 
         console.log("✅ MYSQL CONECTADO CORRECTAMENTE");
 

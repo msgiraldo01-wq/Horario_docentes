@@ -15,7 +15,7 @@
  * - Mitigación: transacción + LOCK TABLES clientes WRITE antes de validar/insertar/actualizar.
  */
 
-async function withWriteLock(connection, fn) {
+async function executeWithTableLock(connection, fn) {
   await connection.query("START TRANSACTION"); // Inicia una transacción para agrupar operaciones como una unidad atómica.
   try { // Abre bloque protegido: cualquier error ejecutará ROLLBACK y liberación de locks en finally.
     await connection.query("LOCK TABLES horarios_docentes WRITE"); // Bloquea la tabla para escritura: evita condiciones de carrera durante validaciones de unicidad.
@@ -57,7 +57,7 @@ async function withReadLock(connection, fn) {
   }
 }
 
-async function findHorarioById(connection, idHorario) {
+async function searchScheduleById(connection, idHorario) {
   const [rows] = await connection.execute(
     `SELECT idHorario, docente, facultad, carrera, materia, fechaClase, horaIniciaClase, horaTerminaClase FROM horarios_docentes WHERE idHorario = ? LIMIT 1`,
     [idHorario]
@@ -93,9 +93,9 @@ async function existsHorarioSolapado(connection, horario,
   return rows.length > 0;
 }
 
-async function createHorario(connection, horario) {
-  return withWriteLock(connection, async () => {
-    // Validar conflictos
+async function registerSchedule(connection, horario) {
+  return executeWithTableLock(connection, async () => {
+    // Compruebar conflictos
     const existeSolapamiento =
       await existsHorarioSolapado(connection, horario);
     if (existeSolapamiento) {
@@ -131,14 +131,14 @@ async function createHorario(connection, horario) {
     );
 
     const idHorario = result.insertId;
-    return await findHorarioById(connection, idHorario);
+    return await searchScheduleById(connection, idHorario);
   });
 }
 
-async function updateHorario(connection, idHorario, horario) {
-  return withWriteLock(connection, async () => {
+async function editSchedule(connection, idHorario, horario) {
+  return executeWithTableLock(connection, async () => {
     const actual =
-      await findHorarioById(connection, idHorario);
+      await searchScheduleById(connection, idHorario);
     if (!actual) {
       const err = new Error("Horario no encontrado");
       err.code = "NOT_FOUND";
@@ -170,14 +170,14 @@ async function updateHorario(connection, idHorario, horario) {
       ]
     );
 
-    return await findHorarioById(connection, idHorario);
+    return await searchScheduleById(connection, idHorario);
   });
 }
 
-async function deleteHorario(connection, idHorario) {
-  return withWriteLock(connection, async () => {
+async function removeSchedule(connection, idHorario) {
+  return executeWithTableLock(connection, async () => {
     const actual =
-      await findHorarioById(connection, idHorario);
+      await searchScheduleById(connection, idHorario);
     if (!actual) {
       const err = new Error("Horario no encontrado");
       err.code = "NOT_FOUND";
@@ -192,7 +192,7 @@ async function deleteHorario(connection, idHorario) {
   });
 }
 
-async function listHorarios(connection) {
+async function fetchSchedules(connection) {
 
   const [rows] = await connection.execute(
     `
@@ -214,9 +214,9 @@ async function listHorarios(connection) {
 }
 
 module.exports = {
-  createHorario,
-  updateHorario,
-  deleteHorario,
-  findHorarioById,
-  listHorarios
+  registerSchedule,
+  editSchedule,
+  removeSchedule,
+  searchScheduleById,
+  fetchSchedules
 };

@@ -1,7 +1,7 @@
 /**
- * Configuración de conexión MySQL (solo para el backend).
+ * Defineción de conexión MySQL (solo para el backend).
  *
- * Seguridad:
+ * Protección:
  * - No exponer estas credenciales al frontend.
  * - En un entorno real se recomienda usar variables de entorno (no hardcodear secretos).
  *

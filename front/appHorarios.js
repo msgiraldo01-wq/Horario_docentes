@@ -1,20 +1,20 @@
 /**
- * Frontend - Sistema de Gestión de Horarios CIAF
+ * Cliente web - Sistema de Gestión de Horarios CIAF
  * Arquitectura SPA con Distribución Dashboard (Sidebar Lateral + Contenedor Dinámico)
  */
 
 (function () {
-    const appContainer = document.getElementById("app");
+    const mainContainer = document.getElementById("serverApplication");
 
     // ── 1. Fuente ──────────────────────────────────────────────────
-    const fontLink = document.createElement("link");
-    fontLink.rel  = "stylesheet";
-    fontLink.href = "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap";
-    document.head.appendChild(fontLink);
+    const fontElement = document.createElement("link");
+    fontElement.rel  = "stylesheet";
+    fontElement.href = "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap";
+    document.head.appendChild(fontElement);
 
     // ── 2. Estilos embebidos ───────────────────────────────────────
-    const styleTag = document.createElement("style");
-    styleTag.textContent = `
+    const styleElement = document.createElement("style");
+    styleElement.textContent = `
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
@@ -321,7 +321,7 @@
         .ciaf-exit-title    { font-size: 1.2rem; font-weight: 700; color: var(--c-borrar); }
         .ciaf-exit-subtitle { font-size: .9rem; color: var(--muted); }
     `;
-    document.head.appendChild(styleTag);
+    document.head.appendChild(styleElement);
 
     // ── Estado global ──────────────────────────────────────────────
     const moduloEstado = {
@@ -338,7 +338,7 @@
         const elemento = document.createElement(tag);
         for (const [prop, valor] of Object.entries(atributos)) {
             if      (prop === "text")              elemento.textContent = String(valor);
-            else if (prop === "html")              elemento.innerHTML   = String(valor);
+            else if (prop === "html")              elemento.innerHTML = sanitizarTexto(valor);
             else if (prop === "value")             elemento.value       = String(valor);
             else if (prop === "disabled" && valor) elemento.setAttribute("disabled", "true");
             else                                   elemento.setAttribute(prop, String(valor));
@@ -348,6 +348,30 @@
 
     function limpiarElemento(nodo) {
         while (nodo.firstChild) nodo.removeChild(nodo.firstChild);
+    }
+
+    // ── Sanitización ─────────────────────────────────────────────
+
+    function sanitizarTexto(valor = "") {
+        return String(valor)
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // quitar acentos raros
+            .replace(/[<>$%{}[\]|\\^~`]/g, "") // caracteres peligrosos
+            .replace(/\s+/g, " ") // espacios dobles
+            .trim()
+            .toUpperCase();
+    }
+
+    function sanitizarBusqueda(valor = "") {
+        return String(valor)
+            .replace(/[<>$%{}[\]|\\^~`]/g, "")
+            .trim()
+            .toLowerCase();
+    }
+
+    function sanitizarNumero(valor = "") {
+        return String(valor)
+            .replace(/\D/g, "");
     }
 
     function transicionarModulo(nombreVista) {
@@ -415,7 +439,7 @@
             contenedorForm.appendChild(controlBusqueda);
 
             btnBuscar.addEventListener("click", async () => {
-                const idValue = inputId.value.trim();
+                const idValue = sanitizarNumero(inputId.value);
                 if (!idValue) { lanzarMensajeFeedback(bloqueAlertas, "Debe digitar el ID a buscar.", true); return; }
                 try {
                     const registro = await realizarLlamadoAPI("GET", `/api/horarios/byidHorario?idHorario=${idValue}`);
@@ -499,13 +523,33 @@
             }
 
             const payload = {
-                docente:          document.getElementById("formDocente").value.trim(),
-                facultad:         document.getElementById("formFacultad").value.trim(),
-                carrera:          document.getElementById("formCarrera").value.trim(),
-                materia:          document.getElementById("formMateria").value.trim(),
-                fechaClase:       document.getElementById("formFecha").value.trim(),
-                horaIniciaClase:  document.getElementById("formHoraInicia").value.trim(),
-                horaTerminaClase: document.getElementById("formHoraTermina").value.trim()
+                docente: sanitizarTexto(
+                    document.getElementById("formDocente").value
+                ),
+
+                facultad: sanitizarTexto(
+                    document.getElementById("formFacultad").value
+                ),
+
+                carrera: sanitizarTexto(
+                    document.getElementById("formCarrera").value
+                ),
+
+                materia: sanitizarTexto(
+                    document.getElementById("formMateria").value
+                ),
+
+                fechaClase: sanitizarTexto(
+                    document.getElementById("formFecha").value
+                ),
+
+                horaIniciaClase: sanitizarTexto(
+                    document.getElementById("formHoraInicia").value
+                ),
+
+                horaTerminaClase: sanitizarTexto(
+                    document.getElementById("formHoraTermina").value
+                )
             };
 
             if (Object.values(payload).some(v => !v)) {
@@ -652,6 +696,9 @@
                     return 0;
                 });
 
+                // Actualizar contador real de registros
+                txtConteo.textContent = `Registros: ${arr.length}`;
+
                 // =========================
                 // TABLA VACÍA
                 // =========================
@@ -748,7 +795,8 @@
 
         btnFiltrar.addEventListener("click", () => {
             moduloEstado.filtrosTable.ordenador     = selectOrd.value;
-            moduloEstado.filtrosTable.buscarTermino = inputBusq.value.trim();
+            moduloEstado.filtrosTable.buscarTermino =
+                sanitizarBusqueda(inputBusq.value);
             cargarDatos();
         });
 
@@ -762,7 +810,8 @@
         inputBusq.addEventListener("keyup", e => {
             if (e.key === "Enter") {
                 moduloEstado.filtrosTable.ordenador     = selectOrd.value;
-                moduloEstado.filtrosTable.buscarTermino = inputBusq.value.trim();
+                moduloEstado.filtrosTable.buscarTermino =
+                    sanitizarBusqueda(inputBusq.value);
                 cargarDatos();
             }
         });
@@ -788,7 +837,7 @@
     // ==========================================
 
     function renderizarEstructuraBase() {
-        limpiarElemento(appContainer);
+        limpiarElemento(mainContainer);
 
         // Header
         const header = crearNodo("header", { class: "ciaf-header" });
@@ -799,7 +848,7 @@
         header.appendChild(brand);
 
         const userArea = crearNodo("div", { class: "ciaf-user-area" });
-        userArea.appendChild(crearNodo("span", { html: "Bienvenido, <strong>Docente</strong>" }));
+        userArea.appendChild(crearNodo("span", { html: "Bienvenido, Docente" }));
 
         const btnNavSalir = crearNodo("button", { class: "ciaf-btn-exit" });
         btnNavSalir.appendChild(crearNodo("span", { text: "⟶" }));
@@ -807,7 +856,7 @@
         btnNavSalir.addEventListener("click", () => transicionarModulo("salir"));
         userArea.appendChild(btnNavSalir);
         header.appendChild(userArea);
-        appContainer.appendChild(header);
+        mainContainer.appendChild(header);
 
         // Layout principal
         const layout = crearNodo("div", { class: "ciaf-layout" });
@@ -857,7 +906,7 @@
         panel.appendChild((vistas[moduloEstado.vistaActiva] ?? vistaBienvenida)());
 
         layout.appendChild(panel);
-        appContainer.appendChild(layout);
+        mainContainer.appendChild(layout);
     }
 
     renderizarEstructuraBase();
