@@ -65,10 +65,10 @@ function validateHorarioPayload(payload) {
   ========================= */
 
   if (!TIME_REGEX.test(horaIniciaClase)) {
-    errors.push("horaIniciaClase inválida (HH:MM)");
+    errors.push("hora de inicio inválida, cambie la hora de inicio (HH:MM)");
   }
   if (!TIME_REGEX.test(horaTerminaClase)) {
-    errors.push("horaTerminaClase inválida (HH:MM)");
+    errors.push("hora de finalizacion inválida, cambie la hora de finalización (HH:MM)");
   }
 
   /* =========================
