@@ -1,6 +1,7 @@
 /**
  * Cliente web - Sistema de Gestión de Horarios CIAF
  * Arquitectura SPA con Distribución Dashboard (Sidebar Lateral + Contenedor Dinámico)
+ * v3 — Custom Selects animados + SweetAlerts pro acordes al diseño institucional
  */
 
 (function () {
@@ -320,6 +321,151 @@
         .ciaf-exit-icon     { font-size: 2.5rem; opacity: .25; }
         .ciaf-exit-title    { font-size: 1.2rem; font-weight: 700; color: var(--c-borrar); }
         .ciaf-exit-subtitle { font-size: .9rem; color: var(--muted); }
+
+        /* ── Custom Select ── */
+        .cs-wrapper {
+            position: relative;
+            user-select: none;
+        }
+        .cs-display {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .6rem .8rem;
+            border: 1.5px solid var(--border);
+            border-radius: 7px;
+            background: var(--surface);
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: .9rem;
+            color: var(--text);
+            transition: border-color .15s, box-shadow .15s;
+            min-height: 38px;
+            width: 100%;
+        }
+        .cs-display:hover { border-color: #93c5fd; }
+        .cs-display.cs-open {
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+        }
+        .cs-display.cs-disabled {
+            background: #fafaf9;
+            color: var(--muted);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .cs-placeholder { color: var(--muted); }
+        .cs-chevron {
+            display: flex; align-items: center; justify-content: center;
+            width: 20px; height: 20px;
+            border-radius: 4px;
+            background: #f5f5f4;
+            color: var(--text);
+            transition: transform .25s, background .15s;
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+        .cs-display.cs-open .cs-chevron {
+            transform: rotate(180deg);
+            background: var(--c-listar);
+            color: #fff;
+        }
+        .cs-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0; right: 0;
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.10);
+            z-index: 9999;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height .28s cubic-bezier(.4,0,.2,1), opacity .2s;
+        }
+        .cs-dropdown.cs-dropdown-open {
+            max-height: 220px;
+            opacity: 1;
+            overflow-y: auto;
+        }
+        .cs-dropdown::-webkit-scrollbar { width: 4px; }
+        .cs-dropdown::-webkit-scrollbar-thumb { background: var(--c-listar); border-radius: 4px; }
+        .cs-option {
+            padding: 9px 14px;
+            font-family: 'Outfit', sans-serif;
+            font-size: .875rem;
+            color: var(--text);
+            cursor: pointer;
+            transition: background .15s, color .15s, padding-left .15s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .cs-option:hover {
+            background: #eff6ff;
+            color: var(--c-listar);
+            padding-left: 20px;
+        }
+        .cs-option.cs-selected {
+            background: var(--c-listar);
+            color: #fff;
+            font-weight: 600;
+        }
+        .cs-option.cs-selected:hover {
+            background: #1d4ed8;
+            color: #fff;
+            padding-left: 14px;
+        }
+        .cs-option-dot {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+            flex-shrink: 0; opacity: .5;
+        }
+        .cs-empty {
+            padding: 12px 14px;
+            font-size: .82rem; color: var(--muted);
+            font-style: italic; text-align: center;
+        }
+
+        /* ── SweetAlert2 overrides CIAF ── */
+        .swal2-popup.ciaf-swal {
+            border-radius: 14px !important;
+            font-family: 'Outfit', sans-serif !important;
+            padding: 2rem 2rem 1.8rem !important;
+            box-shadow: 0 20px 60px rgba(0,0,0,.14) !important;
+        }
+        .swal2-popup.ciaf-swal .swal2-title {
+            font-size: 1.1rem !important; font-weight: 700 !important;
+            color: #1c1917 !important; margin-bottom: .4rem !important;
+        }
+        .swal2-popup.ciaf-swal .swal2-html-container {
+            font-size: .88rem !important; color: #57534e !important;
+            margin: .3rem 0 0 !important;
+        }
+        .swal2-popup.ciaf-swal .swal2-icon.swal2-success { border-color: #16a34a !important; color: #16a34a !important; }
+        .swal2-popup.ciaf-swal .swal2-icon.swal2-success [class^=swal2-success-line] { background-color: #16a34a !important; }
+        .swal2-popup.ciaf-swal .swal2-icon.swal2-success .swal2-success-ring { border-color: rgba(22,163,74,.25) !important; }
+        .swal2-popup.ciaf-swal .swal2-icon.swal2-error   { border-color: #dc2626 !important; color: #dc2626 !important; }
+        .swal2-popup.ciaf-swal .swal2-icon.swal2-warning { border-color: #d97706 !important; color: #d97706 !important; }
+        .swal2-popup.ciaf-swal .swal2-icon.swal2-question{ border-color: #2563eb !important; color: #2563eb !important; }
+        .swal2-popup.ciaf-swal .swal2-confirm {
+            background: var(--c-listar) !important;
+            border: none !important; border-radius: 7px !important;
+            font-family: 'Outfit', sans-serif !important;
+            font-weight: 600 !important; font-size: .875rem !important;
+            padding: .58rem 1.4rem !important;
+            box-shadow: none !important;
+        }
+        .swal2-popup.ciaf-swal .swal2-confirm:hover { background: #1d4ed8 !important; }
+        .swal2-popup.ciaf-swal .swal2-cancel {
+            background: #f5f5f4 !important; color: #78716c !important;
+            border: 1.5px solid #e7e5e4 !important; border-radius: 7px !important;
+            font-family: 'Outfit', sans-serif !important;
+            font-weight: 600 !important; font-size: .875rem !important;
+            padding: .58rem 1.4rem !important;
+        }
+        .swal2-popup.ciaf-swal .swal2-cancel:hover { background: #e7e5e4 !important; }
+        .swal2-popup.ciaf-swal .swal2-timer-progress-bar { background: var(--c-listar) !important; }
     `;
     document.head.appendChild(styleElement);
 
@@ -333,12 +479,219 @@
         }
     };
 
+    // ── Datos institucionales CIAF ─────────────────────────────────
+    const DATOS_CIAF = {
+        "Facultad de Ingeniería": {
+            "Ingeniería de Sistemas": [
+                "Programación y Servicios WEB","Bases de Datos","Redes y Comunicaciones",
+                "Ingeniería de Software","Sistemas Operativos","Algoritmos y Programación"
+            ],
+            "Ingeniería Electrónica": [
+                "Circuitos Eléctricos","Electrónica Analógica","Electrónica Digital",
+                "Microcontroladores","Telecomunicaciones"
+            ]
+        },
+        "Facultad de Ciencias Económicas": {
+            "Administración de Empresas": [
+                "Fundamentos de Administración","Contabilidad General","Economía General",
+                "Marketing Empresarial","Gestión Humana"
+            ],
+            "Contaduría Pública": [
+                "Contabilidad Financiera","Auditoría","Tributaria",
+                "Costos y Presupuestos","Revisoría Fiscal"
+            ]
+        },
+        "Facultad de Ciencias Jurídicas": {
+            "Derecho": [
+                "Derecho Civil","Derecho Comercial","Derecho Laboral",
+                "Derecho Penal","Derecho Constitucional"
+            ]
+        },
+        "Facultad de Ciencias de la Salud": {
+            "Instrumentación Quirúrgica": [
+                "Anatomía Humana","Fisiología","Técnicas Quirúrgicas","Esterilización","Bioseguridad"
+            ],
+            "Regencia de Farmacia": [
+                "Farmacología","Química Orgánica","Legislación Farmacéutica",
+                "Farmacovigilancia","Atención Farmacéutica"
+            ]
+        }
+    };
+
+    // ── Custom Select constructor ──────────────────────────────────
+    function crearCustomSelect({ id, placeholder, opciones, deshabilitado, onChange }) {
+        let valorActual = "";
+        let abierto = false;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "cs-wrapper";
+
+        const display = document.createElement("div");
+        display.className = "cs-display" + (deshabilitado ? " cs-disabled" : "");
+        display.setAttribute("tabindex", deshabilitado ? "-1" : "0");
+        display.setAttribute("role", "combobox");
+        display.setAttribute("aria-expanded", "false");
+        display.setAttribute("id", id + "_display");
+
+        const txtSpan = document.createElement("span");
+        txtSpan.className = "cs-placeholder";
+        txtSpan.textContent = placeholder;
+
+        const chevron = document.createElement("span");
+        chevron.className = "cs-chevron";
+        chevron.innerHTML = `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+        display.appendChild(txtSpan);
+        display.appendChild(chevron);
+
+        const dropdown = document.createElement("div");
+        dropdown.className = "cs-dropdown";
+        dropdown.setAttribute("role", "listbox");
+
+        const hiddenInput = document.createElement("input");
+        hiddenInput.type = "hidden";
+        hiddenInput.id = id;
+        hiddenInput.value = "";
+
+        wrapper.appendChild(display);
+        wrapper.appendChild(dropdown);
+        wrapper.appendChild(hiddenInput);
+
+        function poblarOpciones(lista) {
+            while (dropdown.firstChild) dropdown.removeChild(dropdown.firstChild);
+            valorActual = "";
+            hiddenInput.value = "";
+            txtSpan.textContent = placeholder;
+            txtSpan.className = "cs-placeholder";
+
+            if (!lista || lista.length === 0) {
+                const empty = document.createElement("div");
+                empty.className = "cs-empty";
+                empty.textContent = "Sin opciones disponibles";
+                dropdown.appendChild(empty);
+                return;
+            }
+
+            lista.forEach(function (opcion) {
+                const opt = document.createElement("div");
+                opt.className = "cs-option";
+                opt.setAttribute("role", "option");
+                opt.dataset.value = opcion;
+
+                const dot = document.createElement("span");
+                dot.className = "cs-option-dot";
+                const lbl = document.createElement("span");
+                lbl.textContent = opcion;
+
+                opt.appendChild(dot);
+                opt.appendChild(lbl);
+
+                opt.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    seleccionarValor(opcion);
+                    cerrar();
+                });
+
+                dropdown.appendChild(opt);
+            });
+        }
+
+        function seleccionarValor(val) {
+            valorActual = val;
+            hiddenInput.value = val;
+            txtSpan.textContent = val;
+            txtSpan.className = "";
+            dropdown.querySelectorAll(".cs-option").forEach(function (o) {
+                o.classList.toggle("cs-selected", o.dataset.value === val);
+            });
+            if (onChange) onChange(val);
+        }
+
+        function resetValor(nuevoPlaceholder) {
+            valorActual = "";
+            hiddenInput.value = "";
+            txtSpan.textContent = nuevoPlaceholder || placeholder;
+            txtSpan.className = "cs-placeholder";
+            dropdown.querySelectorAll(".cs-option").forEach(function (o) {
+                o.classList.remove("cs-selected");
+            });
+        }
+
+        function abrir() {
+            if (deshabilitado) return;
+            abierto = true;
+            display.classList.add("cs-open");
+            display.setAttribute("aria-expanded", "true");
+            dropdown.classList.add("cs-dropdown-open");
+        }
+
+        function cerrar() {
+            abierto = false;
+            display.classList.remove("cs-open");
+            display.setAttribute("aria-expanded", "false");
+            dropdown.classList.remove("cs-dropdown-open");
+        }
+
+        function toggleAbrir() { abierto ? cerrar() : abrir(); }
+
+        display.addEventListener("click", function (e) { e.stopPropagation(); toggleAbrir(); });
+        display.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleAbrir(); }
+            if (e.key === "Escape") cerrar();
+        });
+        document.addEventListener("click", function () { cerrar(); });
+
+        poblarOpciones(opciones || []);
+
+        wrapper._setPoblacion = function (lista, nuevoPlaceholder) {
+            poblarOpciones(lista);
+            if (nuevoPlaceholder) { placeholder = nuevoPlaceholder; resetValor(nuevoPlaceholder); }
+        };
+        wrapper._setValor   = function (val) { seleccionarValor(val); };
+        wrapper._reset      = function (nuevoPlaceholder) { resetValor(nuevoPlaceholder); };
+        wrapper._getValue   = function () { return valorActual; };
+
+        return wrapper;
+    }
+
+    // ── SweetAlert2 helpers ────────────────────────────────────────
+    const Swal2 = window.Swal || window.Sweetalert2;
+
+    function ciafAlert({ tipo, titulo, mensaje, timer }) {
+        if (!Swal2) return Promise.resolve();
+        const iconMap = { success: "success", error: "error", warning: "warning", question: "question", info: "info" };
+        return Swal2.fire({
+            customClass: { popup: "ciaf-swal" },
+            icon: iconMap[tipo] || "info",
+            title: titulo,
+            html: mensaje || "",
+            timer: timer || undefined,
+            timerProgressBar: !!timer,
+            showConfirmButton: !timer,
+            confirmButtonText: "Aceptar"
+        });
+    }
+
+    function ciafConfirm({ titulo, mensaje, textoConfirm, textoCancel }) {
+        if (!Swal2) return Promise.resolve({ isConfirmed: window.confirm(mensaje || titulo) });
+        return Swal2.fire({
+            customClass: { popup: "ciaf-swal" },
+            icon: "question",
+            title: titulo,
+            html: mensaje || "",
+            showCancelButton: true,
+            confirmButtonText: textoConfirm || "Sí, continuar",
+            cancelButtonText:  textoCancel  || "Cancelar",
+            reverseButtons: true
+        });
+    }
+
     // ── Utilidades DOM ─────────────────────────────────────────────
     function crearNodo(tag, atributos = {}) {
         const elemento = document.createElement(tag);
         for (const [prop, valor] of Object.entries(atributos)) {
             if      (prop === "text")              elemento.textContent = String(valor);
-            else if (prop === "html")              elemento.innerHTML = sanitizarTexto(valor);
+            else if (prop === "html")              elemento.innerHTML   = sanitizarTexto(valor);
             else if (prop === "value")             elemento.value       = String(valor);
             else if (prop === "disabled" && valor) elemento.setAttribute("disabled", "true");
             else                                   elemento.setAttribute(prop, String(valor));
@@ -350,14 +703,13 @@
         while (nodo.firstChild) nodo.removeChild(nodo.firstChild);
     }
 
-    // ── Sanitización ─────────────────────────────────────────────
-
+    // ── Sanitización ──────────────────────────────────────────────
     function sanitizarTexto(valor = "") {
         return String(valor)
             .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "") // quitar acentos raros
-            .replace(/[<>$%{}[\]|\\^~`]/g, "") // caracteres peligrosos
-            .replace(/\s+/g, " ") // espacios dobles
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[<>$%{}[\]|\\^~`]/g, "")
+            .replace(/\s+/g, " ")
             .trim()
             .toUpperCase();
     }
@@ -370,12 +722,11 @@
     }
 
     function sanitizarNumero(valor = "") {
-        return String(valor)
-            .replace(/\D/g, "");
+        return String(valor).replace(/\D/g, "");
     }
 
     function transicionarModulo(nombreVista) {
-        moduloEstado.vistaActiva  = nombreVista;
+        moduloEstado.vistaActiva   = nombreVista;
         moduloEstado.idSeleccionado = null;
         renderizarEstructuraBase();
     }
@@ -411,7 +762,7 @@
     function vistaBienvenida() {
         const caja = crearNodo("div", { class: "ciaf-welcome" });
         caja.appendChild(crearNodo("div", { class: "ciaf-welcome-icon", text: "◈" }));
-        caja.appendChild(crearNodo("h1", { class: "ciaf-welcome-title", text: "Bienvenido al Sistema de Horarios CIAF" }));
+        caja.appendChild(crearNodo("h1", { class: "ciaf-welcome-title",    text: "Bienvenido al Sistema de Horarios CIAF" }));
         caja.appendChild(crearNodo("p",  { class: "ciaf-welcome-subtitle", text: "Seleccione una opción del menú lateral para comenzar." }));
         return caja;
     }
@@ -424,6 +775,9 @@
 
         const bloqueAlertas = crearNodo("div", { class: "ciaf-alerts" });
         contenedorForm.appendChild(bloqueAlertas);
+
+        // Referencias a custom selects
+        let csF, csC, csM;
 
         // Barra de búsqueda para editar / borrar
         if (modo === "editar" || modo === "borrar") {
@@ -445,14 +799,30 @@
                     const registro = await realizarLlamadoAPI("GET", `/api/horarios/byidHorario?idHorario=${idValue}`);
                     if (!registro) { lanzarMensajeFeedback(bloqueAlertas, "El horario no existe.", true); return; }
                     moduloEstado.idSeleccionado = idValue;
+
                     document.getElementById("formDocente").value     = registro.docente    || "";
-                    document.getElementById("formFacultad").value    = registro.facultad   || "";
-                    document.getElementById("formCarrera").value     = registro.carrera    || "";
-                    document.getElementById("formMateria").value     = registro.materia    || "";
                     document.getElementById("formFecha").value       = registro.fechaClase
                         ? registro.fechaClase.split("T")[0] : "";
                     document.getElementById("formHoraInicia").value  = registro.horaIniciaClase  || "";
                     document.getElementById("formHoraTermina").value = registro.horaTerminaClase || "";
+
+                    // Cargar custom selects encadenados
+                    if (csF && csC && csM) {
+                        const fac = registro.facultad || "";
+                        const car = registro.carrera  || "";
+                        const mat = registro.materia  || "";
+
+                        const carrerasDisp = fac && DATOS_CIAF[fac] ? Object.keys(DATOS_CIAF[fac]) : [];
+                        const materiasDisp = fac && car && DATOS_CIAF[fac] && DATOS_CIAF[fac][car]
+                            ? DATOS_CIAF[fac][car] : [];
+
+                        csF._setValor(fac);
+                        csC._setPoblacion(carrerasDisp, "-- Seleccione carrera --");
+                        if (car) csC._setValor(car);
+                        csM._setPoblacion(materiasDisp, "-- Seleccione materia --");
+                        if (mat) csM._setValor(mat);
+                    }
+
                     lanzarMensajeFeedback(bloqueAlertas, "Horario cargado.", false);
                 } catch (e) { lanzarMensajeFeedback(bloqueAlertas, e.message, true); }
             });
@@ -461,26 +831,76 @@
         // Estructura del formulario
         const formTag = crearNodo("form", { class: "ciaf-form-grid" });
 
-        const campos = [
-            { id: "formDocente",     label: "Docente",            type: "text", disabled: modo === "borrar" },
-            { id: "formFacultad",    label: "Facultad",           type: "text", disabled: modo === "borrar" },
-            { id: "formCarrera",     label: "Carrera",            type: "text", disabled: modo === "borrar" },
-            { id: "formMateria",     label: "Materia",            type: "text", disabled: modo === "borrar" },
-            { id: "formFecha",       label: "Fecha Clase",        type: "date", disabled: modo === "borrar" },
-            { id: "formHoraInicia",  label: "Hora Inicia Clase",  type: "time", disabled: modo === "borrar" },
-            { id: "formHoraTermina", label: "Hora Termina Clase", type: "time", disabled: modo === "borrar" }
-        ];
+        // ── Docente ──
+        const divDocente = crearNodo("div", { class: "ciaf-field" });
+        divDocente.appendChild(crearNodo("label", { class: "ciaf-label", text: "Docente", for: "formDocente" }));
+        const inputDocente = crearNodo("input", { type: "text", class: "ciaf-input", id: "formDocente" });
+        if (modo === "borrar") inputDocente.setAttribute("disabled", "true");
+        divDocente.appendChild(inputDocente);
+        formTag.appendChild(divDocente);
 
-        campos.forEach(c => {
+        // ── Facultad — Custom Select ──
+        const divFacultad = crearNodo("div", { class: "ciaf-field" });
+        divFacultad.appendChild(crearNodo("label", { class: "ciaf-label", text: "Facultad" }));
+        csF = crearCustomSelect({
+            id: "formFacultad",
+            placeholder: "-- Seleccione facultad --",
+            opciones: Object.keys(DATOS_CIAF),
+            deshabilitado: modo === "borrar",
+            onChange: function (val) {
+                const carreras = val && DATOS_CIAF[val] ? Object.keys(DATOS_CIAF[val]) : [];
+                csC._setPoblacion(carreras, "-- Seleccione carrera --");
+                csM._setPoblacion([], "-- Seleccione materia --");
+            }
+        });
+        divFacultad.appendChild(csF);
+        formTag.appendChild(divFacultad);
+
+        // ── Carrera — Custom Select ──
+        const divCarrera = crearNodo("div", { class: "ciaf-field" });
+        divCarrera.appendChild(crearNodo("label", { class: "ciaf-label", text: "Carrera" }));
+        csC = crearCustomSelect({
+            id: "formCarrera",
+            placeholder: "-- Seleccione carrera --",
+            opciones: [],
+            deshabilitado: modo === "borrar",
+            onChange: function (val) {
+                const fac = csF._getValue();
+                const materias = fac && val && DATOS_CIAF[fac] && DATOS_CIAF[fac][val]
+                    ? DATOS_CIAF[fac][val] : [];
+                csM._setPoblacion(materias, "-- Seleccione materia --");
+            }
+        });
+        divCarrera.appendChild(csC);
+        formTag.appendChild(divCarrera);
+
+        // ── Materia — Custom Select ──
+        const divMateria = crearNodo("div", { class: "ciaf-field" });
+        divMateria.appendChild(crearNodo("label", { class: "ciaf-label", text: "Materia" }));
+        csM = crearCustomSelect({
+            id: "formMateria",
+            placeholder: "-- Seleccione materia --",
+            opciones: [],
+            deshabilitado: modo === "borrar"
+        });
+        divMateria.appendChild(csM);
+        formTag.appendChild(divMateria);
+
+        // ── Fecha y horas ──
+        [
+            { id: "formFecha",       label: "Fecha Clase",        type: "date" },
+            { id: "formHoraInicia",  label: "Hora Inicia Clase",  type: "time" },
+            { id: "formHoraTermina", label: "Hora Termina Clase", type: "time" }
+        ].forEach(c => {
             const divCol = crearNodo("div", { class: "ciaf-field" });
             divCol.appendChild(crearNodo("label", { class: "ciaf-label", text: c.label, for: c.id }));
             const paramsInput = { type: c.type, class: "ciaf-input", id: c.id };
-            if (c.disabled) paramsInput.disabled = "true";
+            if (modo === "borrar") paramsInput.disabled = "true";
             divCol.appendChild(crearNodo("input", paramsInput));
             formTag.appendChild(divCol);
         });
 
-        // Botones de acción
+        // ── Botones ──
         const colores = { crear: "ciaf-btn-success", editar: "ciaf-btn-warning", borrar: "ciaf-btn-danger" };
         const textos  = { crear: "Guardar",          editar: "Editar",           borrar: "Eliminar" };
 
@@ -493,85 +913,89 @@
         formTag.appendChild(divBotones);
         contenedorForm.appendChild(formTag);
 
-        // Controladores de eventos
+        // ── Eventos ──
         btnCancel.addEventListener("click", () => {
-            formTag.reset();
             limpiarElemento(bloqueAlertas);
             transicionarModulo("inicio");
         });
 
         btnSubmit.addEventListener("click", async () => {
+
+            // ── BORRAR ──
             if (modo === "borrar") {
                 if (!moduloEstado.idSeleccionado) {
                     lanzarMensajeFeedback(bloqueAlertas, "Debe buscar una identificación existente antes de eliminar.", true);
                     return;
                 }
-                if (confirm("¿Está seguro de Borrar el registro?")) {
+                const res = await ciafConfirm({
+                    titulo: "¿Eliminar horario?",
+                    mensaje: "Esta acción <b>no se puede deshacer</b>. ¿Está seguro de borrar el registro?",
+                    textoConfirm: "Sí, eliminar",
+                    textoCancel: "Cancelar"
+                });
+                if (res.isConfirmed) {
                     try {
                         await realizarLlamadoAPI("DELETE", "/api/horarios/by-idHorario", { idHorario: moduloEstado.idSeleccionado });
                         lanzarMensajeFeedback(bloqueAlertas, "Horario borrado.", false);
                         btnSubmit.setAttribute("disabled", "true");
-                        setTimeout(() => transicionarModulo("inicio"), 1500);
-                    } catch (err) { lanzarMensajeFeedback(bloqueAlertas, err.message, true); }
+                        await ciafAlert({ tipo: "success", titulo: "¡Eliminado!", mensaje: "El horario fue borrado correctamente.", timer: 1800 });
+                        transicionarModulo("inicio");
+                    } catch (err) {
+                        lanzarMensajeFeedback(bloqueAlertas, err.message, true);
+                        ciafAlert({ tipo: "error", titulo: "Error", mensaje: err.message });
+                    }
                 }
                 return;
             }
 
+            // ── EDITAR sin cargar ──
             if (modo === "editar" && !moduloEstado.idSeleccionado) {
                 lanzarMensajeFeedback(bloqueAlertas, "Debe buscar un horario existente para editar.", true);
                 return;
             }
 
             const payload = {
-                docente: sanitizarTexto(
-                    document.getElementById("formDocente").value
-                ),
-
-                facultad: sanitizarTexto(
-                    document.getElementById("formFacultad").value
-                ),
-
-                carrera: sanitizarTexto(
-                    document.getElementById("formCarrera").value
-                ),
-
-                materia: sanitizarTexto(
-                    document.getElementById("formMateria").value
-                ),
-
-                fechaClase: sanitizarTexto(
-                    document.getElementById("formFecha").value
-                ),
-
-                horaIniciaClase: sanitizarTexto(
-                    document.getElementById("formHoraInicia").value
-                ),
-
-                horaTerminaClase: sanitizarTexto(
-                    document.getElementById("formHoraTermina").value
-                )
+                docente:          sanitizarTexto(document.getElementById("formDocente").value),
+                facultad:         document.getElementById("formFacultad").value,
+                carrera:          document.getElementById("formCarrera").value,
+                materia:          document.getElementById("formMateria").value,
+                fechaClase:       sanitizarTexto(document.getElementById("formFecha").value),
+                horaIniciaClase:  sanitizarTexto(document.getElementById("formHoraInicia").value),
+                horaTerminaClase: sanitizarTexto(document.getElementById("formHoraTermina").value)
             };
 
             if (Object.values(payload).some(v => !v)) {
                 lanzarMensajeFeedback(bloqueAlertas, "Debes completar los datos del formulario.", true);
+                ciafAlert({ tipo: "warning", titulo: "Campos incompletos", mensaje: "Por favor completa todos los campos antes de continuar." });
                 return;
             }
 
-            if (modo === "editar" && !confirm("¿Está seguro de Editar el registro?")) { formTag.reset(); return; }
+            if (modo === "editar") {
+                const res = await ciafConfirm({
+                    titulo: "¿Editar horario?",
+                    mensaje: "Se actualizarán los datos del horario seleccionado.",
+                    textoConfirm: "Sí, editar"
+                });
+                if (!res.isConfirmed) return;
+            }
 
             try {
                 if (modo === "crear") {
                     await realizarLlamadoAPI("POST", "/api/horarios", payload);
                     lanzarMensajeFeedback(bloqueAlertas, "Registro creado.", false);
-                } else {
+                    btnSubmit.setAttribute("disabled", "true");
+                    await ciafAlert({ tipo: "success", titulo: "¡Creado!", mensaje: "El horario fue registrado exitosamente.", timer: 1800 });
+                } else if (modo === "editar") {
                     await realizarLlamadoAPI("PUT", `/api/horarios/${moduloEstado.idSeleccionado}`, payload);
                     lanzarMensajeFeedback(bloqueAlertas, "Horario editado.", false);
+                    btnSubmit.setAttribute("disabled", "true");
+                    await ciafAlert({ tipo: "success", titulo: "¡Actualizado!", mensaje: "El horario fue editado correctamente.", timer: 1800 });
                 }
-                btnSubmit.setAttribute("disabled", "true");
-                setTimeout(() => transicionarModulo("inicio"), 1500);
+                transicionarModulo("inicio");
             } catch (ex) {
                 const msg = ex.detalles?.errors ? ex.detalles.errors.join(", ") : ex.message;
                 lanzarMensajeFeedback(bloqueAlertas, msg, true);
+                ciafAlert({ tipo: "error", titulo: "Error al guardar", mensaje: msg });
             }
         });
 
@@ -631,187 +1055,79 @@
         btnCerrar.addEventListener("click", () => transicionarModulo("inicio"));
 
         async function cargarDatos() {
-            [selectOrd, inputBusq, btnFiltrar].forEach(el =>
-                el.setAttribute("disabled", "true")
-            );
+            [selectOrd, inputBusq, btnFiltrar].forEach(el => el.setAttribute("disabled", "true"));
 
             try {
-                // Obtener todos los registros
-                const resList = await realizarLlamadoAPI(
-                    "GET",
-                    "/api/horarios/list"
-                );
-
+                const resList = await realizarLlamadoAPI("GET", "/api/horarios/list");
                 limpiarElemento(tbody);
 
-                let arr = Array.isArray(resList?.horarios)
-                    ? [...resList.horarios]
-                    : [];
+                let arr = Array.isArray(resList?.horarios) ? [...resList.horarios] : [];
 
-                // =========================
-                // BUSCADOR
-                // =========================
-                const terminoBusqueda = moduloEstado.filtrosTable.buscarTermino
-                    .trim()
-                    .toLowerCase();
-
+                // Buscador
+                const terminoBusqueda = moduloEstado.filtrosTable.buscarTermino.trim().toLowerCase();
                 if (terminoBusqueda) {
                     arr = arr.filter(item =>
                         Object.values(item).some(valor =>
-                            String(valor ?? "")
-                                .toLowerCase()
-                                .includes(terminoBusqueda)
+                            String(valor ?? "").toLowerCase().includes(terminoBusqueda)
                         )
                     );
                 }
 
-                // =========================
-                // ORDENAMIENTO
-                // =========================
+                // Ordenamiento
                 const campoOrden = moduloEstado.filtrosTable.ordenador;
-
                 arr = arr.sort((a, b) => {
-
-                    // ORDEN POR ID
                     if (campoOrden === "idHorario") {
-
-                        const idA = parseInt(a.idHorario) || 0;
-                        const idB = parseInt(b.idHorario) || 0;
-
-                        return idA - idB;
+                        return (parseInt(a.idHorario) || 0) - (parseInt(b.idHorario) || 0);
                     }
-
-                    // ORDEN ALFABÉTICO
-                    const textoA = String(a[campoOrden] || "")
-                        .trim()
-                        .toLowerCase();
-
-                    const textoB = String(b[campoOrden] || "")
-                        .trim()
-                        .toLowerCase();
-
-                    if (textoA < textoB) return -1;
-                    if (textoA > textoB) return 1;
-
-                    return 0;
+                    const tA = String(a[campoOrden] || "").trim().toLowerCase();
+                    const tB = String(b[campoOrden] || "").trim().toLowerCase();
+                    return tA < tB ? -1 : tA > tB ? 1 : 0;
                 });
 
-                // Actualizar contador real de registros
                 txtConteo.textContent = `Registros: ${arr.length}`;
 
-                // =========================
-                // TABLA VACÍA
-                // =========================
                 if (arr.length === 0) {
                     const trV = crearNodo("tr");
-
-                    trV.appendChild(
-                        crearNodo("td", {
-                            class: "ciaf-empty",
-                            text: "No hay registros para mostrar.",
-                            colspan: "8"
-                        })
-                    );
-
+                    trV.appendChild(crearNodo("td", { class: "ciaf-empty", text: "No hay registros para mostrar.", colspan: "8" }));
                     tbody.appendChild(trV);
-
                 } else {
-
-                    // =========================
-                    // PINTAR TABLA
-                    // =========================
                     arr.forEach(item => {
-
                         const tr = crearNodo("tr");
-
-                        tr.appendChild(
-                            crearNodo("td", {
-                                text: item.idHorario,
-                                class: "ciaf-td-id"
-                            })
-                        );
-
-                        tr.appendChild(
-                            crearNodo("td", {
-                                text: item.docente
-                            })
-                        );
-
-                        tr.appendChild(
-                            crearNodo("td", {
-                                text: item.facultad
-                            })
-                        );
-
-                        tr.appendChild(
-                            crearNodo("td", {
-                                text: item.carrera
-                            })
-                        );
-
-                        tr.appendChild(
-                            crearNodo("td", {
-                                text: item.materia
-                            })
-                        );
-
-                        tr.appendChild(
-                            crearNodo("td", {
-                                text: item.fechaClase
-                            })
-                        );
-
-                        tr.appendChild(
-                            crearNodo("td", {
-                                text: item.horaIniciaClase
-                                    ? item.horaIniciaClase.substring(0, 5)
-                                    : ""
-                            })
-                        );
-
-                        tr.appendChild(
-                            crearNodo("td", {
-                                text: item.horaTerminaClase
-                                    ? item.horaTerminaClase.substring(0, 5)
-                                    : ""
-                            })
-                        );
-
+                        tr.appendChild(crearNodo("td", { text: item.idHorario,    class: "ciaf-td-id" }));
+                        tr.appendChild(crearNodo("td", { text: item.docente }));
+                        tr.appendChild(crearNodo("td", { text: item.facultad }));
+                        tr.appendChild(crearNodo("td", { text: item.carrera }));
+                        tr.appendChild(crearNodo("td", { text: item.materia }));
+                        tr.appendChild(crearNodo("td", { text: item.fechaClase }));
+                        tr.appendChild(crearNodo("td", { text: item.horaIniciaClase  ? item.horaIniciaClase.substring(0,5)  : "" }));
+                        tr.appendChild(crearNodo("td", { text: item.horaTerminaClase ? item.horaTerminaClase.substring(0,5) : "" }));
                         tbody.appendChild(tr);
                     });
                 }
 
             } catch (err) {
-
                 console.error(err);
-
+                ciafAlert({ tipo: "error", titulo: "Error al cargar", mensaje: "No se pudo obtener el listado de horarios." });
             } finally {
-
-                [selectOrd, inputBusq, btnFiltrar].forEach(el =>
-                    el.removeAttribute("disabled")
-                );
+                [selectOrd, inputBusq, btnFiltrar].forEach(el => el.removeAttribute("disabled"));
             }
         }
 
         btnFiltrar.addEventListener("click", () => {
             moduloEstado.filtrosTable.ordenador     = selectOrd.value;
-            moduloEstado.filtrosTable.buscarTermino =
-                sanitizarBusqueda(inputBusq.value);
+            moduloEstado.filtrosTable.buscarTermino = sanitizarBusqueda(inputBusq.value);
             cargarDatos();
         });
 
         selectOrd.addEventListener("change", () => {
-
             moduloEstado.filtrosTable.ordenador = selectOrd.value;
-
             cargarDatos();
         });
 
         inputBusq.addEventListener("keyup", e => {
             if (e.key === "Enter") {
                 moduloEstado.filtrosTable.ordenador     = selectOrd.value;
-                moduloEstado.filtrosTable.buscarTermino =
-                    sanitizarBusqueda(inputBusq.value);
+                moduloEstado.filtrosTable.buscarTermino = sanitizarBusqueda(inputBusq.value);
                 cargarDatos();
             }
         });
@@ -843,7 +1159,7 @@
         const header = crearNodo("header", { class: "ciaf-header" });
 
         const brand = crearNodo("div", { class: "ciaf-brand" });
-        brand.appendChild(crearNodo("div", { class: "ciaf-brand-icon", text: "H" }));
+        brand.appendChild(crearNodo("div",  { class: "ciaf-brand-icon", text: "H" }));
         brand.appendChild(crearNodo("span", { text: "Administración de Horarios" }));
         header.appendChild(brand);
 
@@ -867,10 +1183,10 @@
 
         const nav = crearNodo("div", { class: "ciaf-nav" });
         const rutasMenu = [
-            { clave: "crear",  etiqueta: "Crear horario",      iconChar: "+" },
-            { clave: "editar", etiqueta: "Editar horario",     iconChar: "✏" },
-            { clave: "borrar", etiqueta: "Borrar horario",     iconChar: "✕" },
-            { clave: "listar", etiqueta: "Listado de horarios",iconChar: "≡" }
+            { clave: "crear",  etiqueta: "Crear horario",       iconChar: "+" },
+            { clave: "editar", etiqueta: "Editar horario",      iconChar: "✏" },
+            { clave: "borrar", etiqueta: "Borrar horario",      iconChar: "✕" },
+            { clave: "listar", etiqueta: "Listado de horarios", iconChar: "≡" }
         ];
 
         rutasMenu.forEach(item => {
