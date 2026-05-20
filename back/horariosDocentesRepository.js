@@ -1,77 +1,142 @@
 /**
- * Repositorio de horarios docentes (CRUD) con:
- * - Sentencias preparadas (execute)
- * - Control de transacciones (START TRANSACTION/COMMIT/ROLLBACK)
- * - Locks explícitos (LOCK TABLES/UNLOCK TABLES)
- *
- * Vulnerabilidad mitigada: Inyección SQL (SQL Injection)
- * - Qué explota: concatenación de strings en SQL.
- * - Criticidad: Alta/Crítica.
- * - Mitigación: placeholders + connection.execute en todas las consultas.
- *
- * Vulnerabilidad mitigada: TOCTOU / condiciones de carrera en validación de unicidad
- * - Qué explota: validación previa sin aislamiento.
- * - Criticidad: Media.
- * - Mitigación: transacción + LOCK TABLES clientes WRITE antes de validar/insertar/actualizar.
+ * Repositorio de horarios docentes (CRUD)
+ * Compatible con appHorarios.js
  */
 
-async function withWriteLock(connection, fn) {
-  await connection.query("START TRANSACTION"); // Inicia una transacción para agrupar operaciones como una unidad atómica.
-  try { // Abre bloque protegido: cualquier error ejecutará ROLLBACK y liberación de locks en finally.
-    await connection.query("LOCK TABLES horarios_docentes WRITE"); // Bloquea la tabla para escritura: evita condiciones de carrera durante validaciones de unicidad.
-    const result = await fn(); // Ejecuta la operación crítica (validar + insertar/actualizar/borrar) dentro del lock.
-    await connection.query("COMMIT"); // Confirma la transacción: hace persistentes los cambios.
-    return result; // Devuelve el resultado de la operación al llamador.
-  } catch (err) { // Captura cualquier error de la operación crítica para revertir cambios.
-    try { // Intenta ROLLBACK; si falla, igual se re-lanza el error original.
-      await connection.query("ROLLBACK"); // Revierte cambios si algo falló (consistencia).
-    } catch { // Un rollback puede fallar si la conexión se cayó; se ignora para no ocultar el error principal.
-    }
-    throw err; // Re-lanza el error para que el controlador HTTP lo traduzca a una respuesta.
-  } finally { // Se ejecuta siempre: haya éxito o error, libera locks para no bloquear el sistema.
-    try { // Intenta liberar locks incluso si hubo errores previos.
-      await connection.query("UNLOCK TABLES"); // Libera el lock de tabla (crítico para no bloquear a otros clientes).
-    } catch { // Si UNLOCK falla (p.ej. conexión cerrada), se ignora porque no hay mucho que hacer aquí.
-    }
+function limpiarTexto(valor) {
+  return String(valor || "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function validarHorario(horario) {
+
+  horario.docente = limpiarTexto(horario.docente);
+  horario.facultad = limpiarTexto(horario.facultad);
+  horario.carrera = limpiarTexto(horario.carrera);
+  horario.materia = limpiarTexto(horario.materia);
+
+  if (
+    !horario.docente ||
+    !horario.facultad ||
+    !horario.carrera ||
+    !horario.materia ||
+    !horario.fechaClase ||
+    !horario.horaIniciaClase ||
+    !horario.horaTerminaClase
+  ) {
+
+    const err = new Error(
+      "Todos los campos son obligatorios"
+    );
+
+    err.code = "VALIDATION_ERROR";
+
+    throw err;
+  }
+
+  // Validar fechas
+  const fecha = new Date(horario.fechaClase);
+
+  if (Number.isNaN(fecha.getTime())) {
+
+    const err = new Error("Fecha inválida");
+
+    err.code = "INVALID_DATE";
+
+    throw err;
+  }
+
+  // Validar horas
+  if (
+    horario.horaIniciaClase >= horario.horaTerminaClase
+  ) {
+
+    const err = new Error(
+      "La hora inicial debe ser menor a la final"
+    );
+
+    err.code = "INVALID_TIME_RANGE";
+
+    throw err;
   }
 }
 
-async function withReadLock(connection, fn) {
-  await connection.query("START TRANSACTION"); // Inicia transacción para garantizar consistencia de lectura bajo lock.
-  try { // Bloque protegido: asegura COMMIT/ROLLBACK y liberación de locks de lectura.
-    await connection.query("LOCK TABLES horarios_docentes READ"); // Bloquea la tabla en modo lectura: nadie puede escribir mientras se valida/lee.
-    const result = await fn(); // Ejecuta la operación de lectura de forma consistente.
-    await connection.query("COMMIT"); // Finaliza la transacción.
-    return result; // Retorna el resultado al llamador.
-  } catch (err) { // Captura errores de lectura/consistencia.
-    try { // Intenta revertir la transacción antes de propagar el error.
-      await connection.query("ROLLBACK"); // Deshace la transacción si falló (aunque sea lectura, mantiene simetría del flujo).
-    } catch { // Ignora fallo de rollback secundario.
-    }
-    throw err; // Propaga el error para manejo centralizado.
-  } finally { // Se ejecuta siempre para liberar el lock READ.
-    try { // Intenta liberar locks sin importar el estado de la transacción.
-      await connection.query("UNLOCK TABLES"); // Libera el lock de lectura.
-    } catch { // Ignora fallo al liberar locks por ser un error secundario.
-    }
+async function withWriteLock(connection, fn) {
+
+  await connection.query("START TRANSACTION");
+
+  try {
+
+    await connection.query(
+      "LOCK TABLES horarios_docentes WRITE"
+    );
+
+    const result = await fn();
+
+    await connection.query("COMMIT");
+
+    return result;
+
+  } catch (err) {
+
+    try {
+
+      await connection.query("ROLLBACK");
+
+    } catch {}
+
+    throw err;
+
+  } finally {
+
+    try {
+
+      await connection.query("UNLOCK TABLES");
+
+    } catch {}
   }
 }
 
 async function findHorarioById(connection, idHorario) {
+
   const [rows] = await connection.execute(
-    `SELECT idHorario, docente, facultad, carrera, materia, fechaClase, horaIniciaClase, horaTerminaClase FROM horarios_docentes WHERE idHorario = ? LIMIT 1`,
+    `
+      SELECT
+        idHorario,
+        docente,
+        facultad,
+        carrera,
+        materia,
+        fechaClase,
+        horaIniciaClase,
+        horaTerminaClase
+      FROM horarios_docentes
+      WHERE idHorario = ?
+      LIMIT 1
+    `,
     [idHorario]
   );
 
   return rows[0] ?? null;
 }
 
-async function existsHorarioSolapado(connection, horario,
+async function existsHorarioSolapado(
+  connection,
+  horario,
   { excludeIdHorario } = {}
 ) {
 
-  let sql = `SELECT 1 AS ok FROM horarios_docentes WHERE docente = ? AND fechaClase = ?
-            AND (horaIniciaClase < ? AND horaTerminaClase > ?)`;
+  let sql = `
+    SELECT 1 AS ok
+    FROM horarios_docentes
+    WHERE docente = ?
+      AND fechaClase = ?
+      AND (
+        horaIniciaClase < ?
+        AND horaTerminaClase > ?
+      )
+  `;
 
   const params = [
     horario.docente,
@@ -80,28 +145,43 @@ async function existsHorarioSolapado(connection, horario,
     horario.horaIniciaClase
   ];
 
-  // Excluir el mismo registro cuando se actualiza
   if (excludeIdHorario) {
+
     sql += " AND idHorario <> ?";
+
     params.push(excludeIdHorario);
   }
 
   sql += " LIMIT 1";
 
-  const [rows] = await connection.execute(sql, params);
+  const [rows] = await connection.execute(
+    sql,
+    params
+  );
 
   return rows.length > 0;
 }
 
 async function createHorario(connection, horario) {
+
   return withWriteLock(connection, async () => {
-    // Validar conflictos
+
+    validarHorario(horario);
+
     const existeSolapamiento =
-      await existsHorarioSolapado(connection, horario);
+      await existsHorarioSolapado(
+        connection,
+        horario
+      );
+
     if (existeSolapamiento) {
+
       const err = new Error(
-        "El docente ya tiene una clase en ese horario");
+        "El docente ya tiene una clase en ese horario"
+      );
+
       err.code = "HORARIO_SOLAPADO";
+
       throw err;
     }
 
@@ -130,34 +210,73 @@ async function createHorario(connection, horario) {
       ]
     );
 
-    const idHorario = result.insertId;
-    return await findHorarioById(connection, idHorario);
+    return await findHorarioById(
+      connection,
+      result.insertId
+    );
   });
 }
 
-async function updateHorario(connection, idHorario, horario) {
+async function updateHorario(
+  connection,
+  idHorario,
+  horario
+) {
+
   return withWriteLock(connection, async () => {
+
+    validarHorario(horario);
+
     const actual =
-      await findHorarioById(connection, idHorario);
+      await findHorarioById(
+        connection,
+        idHorario
+      );
+
     if (!actual) {
-      const err = new Error("Horario no encontrado");
+
+      const err = new Error(
+        "Horario no encontrado"
+      );
+
       err.code = "NOT_FOUND";
+
       throw err;
     }
 
     const existeSolapamiento =
-      await existsHorarioSolapado(connection,horario,
-        { excludeIdHorario: idHorario }
+      await existsHorarioSolapado(
+        connection,
+        horario,
+        {
+          excludeIdHorario: idHorario
+        }
       );
+
     if (existeSolapamiento) {
+
       const err = new Error(
-        "El docente ya tiene una clase en ese horario");
+        "El docente ya tiene una clase en ese horario"
+      );
+
       err.code = "HORARIO_SOLAPADO";
+
       throw err;
     }
 
     await connection.execute(
-      `UPDATE horarios_docentes SET docente = ?, facultad = ?, carrera = ?, materia = ?, fechaClase = ?, horaIniciaClase = ?, horaTerminaClase = ? WHERE idHorario = ?`,
+      `
+        UPDATE horarios_docentes
+        SET
+          docente = ?,
+          facultad = ?,
+          carrera = ?,
+          materia = ?,
+          fechaClase = ?,
+          horaIniciaClase = ?,
+          horaTerminaClase = ?
+        WHERE idHorario = ?
+      `,
       [
         horario.docente,
         horario.facultad,
@@ -170,24 +289,46 @@ async function updateHorario(connection, idHorario, horario) {
       ]
     );
 
-    return await findHorarioById(connection, idHorario);
+    return await findHorarioById(
+      connection,
+      idHorario
+    );
   });
 }
 
-async function deleteHorario(connection, idHorario) {
+async function deleteHorario(
+  connection,
+  idHorario
+) {
+
   return withWriteLock(connection, async () => {
+
     const actual =
-      await findHorarioById(connection, idHorario);
+      await findHorarioById(
+        connection,
+        idHorario
+      );
+
     if (!actual) {
-      const err = new Error("Horario no encontrado");
+
+      const err = new Error(
+        "Horario no encontrado"
+      );
+
       err.code = "NOT_FOUND";
+
       throw err;
     }
 
     await connection.execute(
-      `DELETE FROM horarios_docentes WHERE idHorario = ? LIMIT 1`,
+      `
+        DELETE FROM horarios_docentes
+        WHERE idHorario = ?
+        LIMIT 1
+      `,
       [idHorario]
     );
+
     return actual;
   });
 }
@@ -206,7 +347,9 @@ async function listHorarios(connection) {
         horaIniciaClase,
         horaTerminaClase
       FROM horarios_docentes
-      ORDER BY fechaClase ASC, horaIniciaClase ASC
+      ORDER BY
+        fechaClase ASC,
+        horaIniciaClase ASC
     `
   );
 
