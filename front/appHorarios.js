@@ -979,27 +979,37 @@
                 if (!res.isConfirmed) return;
             }
 
-            try {
-                if (modo === "crear") {
-                    await realizarLlamadoAPI("POST", "/api/horarios", payload);
-                    lanzarMensajeFeedback(bloqueAlertas, "Registro creado.", false);
-                    btnSubmit.setAttribute("disabled", "true");
-                    await ciafAlert({ tipo: "success", titulo: "¡Creado!", mensaje: "El horario fue registrado exitosamente.", timer: 1800 });
-                } else if (modo === "editar") {
-                    await realizarLlamadoAPI("PUT", `/api/horarios/${moduloEstado.idSeleccionado}`, payload);
-                    lanzarMensajeFeedback(bloqueAlertas, "Horario editado.", false);
-                    btnSubmit.setAttribute("disabled", "true");
-                    await ciafAlert({ tipo: "success", titulo: "¡Actualizado!", mensaje: "El horario fue editado correctamente.", timer: 1800 });
-                }
-                transicionarModulo("inicio");
-            } catch (ex) {
-                const msg = ex.detalles?.errors ? ex.detalles.errors.join(", ") : ex.message;
-                lanzarMensajeFeedback(bloqueAlertas, msg, true);
-                ciafAlert({ tipo: "error", titulo: "Error al guardar", mensaje: msg });
-            }
-        });
+          try {
+    if (modo === "crear") {
+        await realizarLlamadoAPI("POST", "/api/horarios", payload);
+        lanzarMensajeFeedback(bloqueAlertas, "Registro creado.", false);
+        btnSubmit.setAttribute("disabled", "true");
+        await ciafAlert({ tipo: "success", titulo: "¡Creado!", mensaje: "El horario fue registrado exitosamente.", timer: 1800 });
+    } else if (modo === "editar") {
+        await realizarLlamadoAPI("PUT", `/api/horarios/${moduloEstado.idSeleccionado}`, payload);
+        lanzarMensajeFeedback(bloqueAlertas, "Horario editado.", false);
+        btnSubmit.setAttribute("disabled", "true");
+        await ciafAlert({ tipo: "success", titulo: "¡Actualizado!", mensaje: "El horario fue editado correctamente.", timer: 1800 });
+    }
 
-        return contenedorForm;
+    transicionarModulo("inicio");
+
+    } catch (ex) {
+
+    console.error("ERROR COMPLETO:", ex);
+    console.error("DETALLES:", ex.detalles);
+
+    const msg = ex.detalles?.errors
+        ? ex.detalles.errors.join(", ")
+        : ex.message;
+
+    lanzarMensajeFeedback(bloqueAlertas, msg, true);
+
+    ciafAlert({
+        tipo: "error",
+        titulo: "Error al guardar",
+        mensaje: msg
+    });
     }
 
     function componenteTablaListado() {
