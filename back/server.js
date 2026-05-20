@@ -85,18 +85,17 @@ app.post("/api/horarios", async (req, res) => {
 
     } catch (error) {
 
-        if (error.code === "HORARIO_SOLAPADO") {
-
-            return res.status(409).json({
-                message: error.message
-            });
-        }
-
-        console.error(error);
-
-        res.status(500).json({
-            message: "No puedes programar este horario porque ya pasó la hora o no está disponible."
+    if (error.code === "HORARIO_SOLAPADO") {
+        return res.status(409).json({
+            message: error.message
         });
+    }
+
+    console.error(error);
+
+    res.status(500).json({
+        message: error.message  // 👈 muestra el error real temporalmente
+    });
 
     } finally {
 
