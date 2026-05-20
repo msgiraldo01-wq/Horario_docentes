@@ -90,7 +90,7 @@ function validateHorarioPayload(payload) {
     // La hora final debe ser mayor
     if (fin <= inicio) {
       errors.push(
-        "horaTerminaClase debe ser mayor que horaIniciaClase"
+        "La hora en que finaliza la clase no puede ser menor o igual a la hora de inicio."
       );
     }
   }
