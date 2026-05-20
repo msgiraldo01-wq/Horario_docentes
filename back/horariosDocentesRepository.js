@@ -18,7 +18,7 @@
 async function withWriteLock(connection, fn) {
   await connection.query("START TRANSACTION"); // Inicia una transacción para agrupar operaciones como una unidad atómica.
   try { // Abre bloque protegido: cualquier error ejecutará ROLLBACK y liberación de locks en finally.
-    await connection.query("LOCK TABLES horariosdocentes WRITE"); // Bloquea la tabla para escritura: evita condiciones de carrera durante validaciones de unicidad.
+    await connection.query("LOCK TABLES horarios_docentes WRITE"); // Bloquea la tabla para escritura: evita condiciones de carrera durante validaciones de unicidad.
     const result = await fn(); // Ejecuta la operación crítica (validar + insertar/actualizar/borrar) dentro del lock.
     await connection.query("COMMIT"); // Confirma la transacción: hace persistentes los cambios.
     return result; // Devuelve el resultado de la operación al llamador.
@@ -39,7 +39,7 @@ async function withWriteLock(connection, fn) {
 async function withReadLock(connection, fn) {
   await connection.query("START TRANSACTION"); // Inicia transacción para garantizar consistencia de lectura bajo lock.
   try { // Bloque protegido: asegura COMMIT/ROLLBACK y liberación de locks de lectura.
-    await connection.query("LOCK TABLES horariosdocentes READ"); // Bloquea la tabla en modo lectura: nadie puede escribir mientras se valida/lee.
+    await connection.query("LOCK TABLES horarios_docentes READ"); // Bloquea la tabla en modo lectura: nadie puede escribir mientras se valida/lee.
     const result = await fn(); // Ejecuta la operación de lectura de forma consistente.
     await connection.query("COMMIT"); // Finaliza la transacción.
     return result; // Retorna el resultado al llamador.
@@ -59,7 +59,7 @@ async function withReadLock(connection, fn) {
 
 async function findHorarioById(connection, idHorario) {
   const [rows] = await connection.execute(
-    `SELECT idHorario, docente, facultad, carrera, materia, fechaClase, horaIniciaClase, horaTerminaClase FROM horariosdocentes WHERE idHorario = ? LIMIT 1`,
+    `SELECT idHorario, docente, facultad, carrera, materia, fechaClase, horaIniciaClase, horaTerminaClase FROM horarios_docentes WHERE idHorario = ? LIMIT 1`,
     [idHorario]
   );
 
@@ -70,7 +70,7 @@ async function existsHorarioSolapado(connection, horario,
   { excludeIdHorario } = {}
 ) {
 
-  let sql = `SELECT 1 AS ok FROM horariosdocentes WHERE docente = ? AND fechaClase = ?
+  let sql = `SELECT 1 AS ok FROM horarios_docentes WHERE docente = ? AND fechaClase = ?
             AND (horaIniciaClase < ? AND horaTerminaClase > ?)`;
 
   const params = [
@@ -107,7 +107,7 @@ async function createHorario(connection, horario) {
 
     const [result] = await connection.execute(
       `
-        INSERT INTO horariosdocentes
+        INSERT INTO horarios_docentes
         (
           docente,
           facultad,
@@ -157,7 +157,7 @@ async function updateHorario(connection, idHorario, horario) {
     }
 
     await connection.execute(
-      `UPDATE horariosdocentes SET docente = ?, facultad = ?, carrera = ?, materia = ?, fechaClase = ?, horaIniciaClase = ?, horaTerminaClase = ? WHERE idHorario = ?`,
+      `UPDATE horarios_docentes SET docente = ?, facultad = ?, carrera = ?, materia = ?, fechaClase = ?, horaIniciaClase = ?, horaTerminaClase = ? WHERE idHorario = ?`,
       [
         horario.docente,
         horario.facultad,
@@ -185,7 +185,7 @@ async function deleteHorario(connection, idHorario) {
     }
 
     await connection.execute(
-      `DELETE FROM horariosdocentes WHERE idHorario = ? LIMIT 1`,
+      `DELETE FROM horarios_docentes WHERE idHorario = ? LIMIT 1`,
       [idHorario]
     );
     return actual;
@@ -205,7 +205,7 @@ async function listHorarios(connection) {
         fechaClase,
         horaIniciaClase,
         horaTerminaClase
-      FROM horariosdocentes
+      FROM horarios_docentes
       ORDER BY fechaClase ASC, horaIniciaClase ASC
     `
   );
