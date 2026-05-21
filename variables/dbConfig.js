@@ -13,8 +13,8 @@
 const host = process.env.DB_HOST || "127.0.0.1"; // Host del servidor MySQL; se permite override con variable de entorno para no hardcodear valores.
 const portRaw = process.env.DB_PORT; // Valor crudo (string) del puerto tomado desde el entorno.
 const port = portRaw && Number.isInteger(Number(portRaw)) ? Number(portRaw) : 3306; // Convierte a número entero seguro; si no es válido, usa 3306 (default MySQL).
-const user = process.env.DB_USER || "Conexion"; // Usuario de BD; parametrizable para distintos entornos (dev/test/prod).
-const password = process.env.DB_PASSWORD || "juandaniel2017"; // Vulnerabilidad: Use of Hard-coded Credentials (CWE-798), explota fuga de repositorio/logs; criticidad Crítica (CVSS ~9.8); mitigación aplicada: soporte de variables de entorno para reemplazar el secreto sin tocar código (en producción debe eliminarse el fallback).
+const user = process.env.DB_USER || "root"; // Usuario de BD; parametrizable para distintos entornos (dev/test/prod).
+const password = process.env.DB_PASSWORD || "Colombia01*"; // Vulnerabilidad: Use of Hard-coded Credentials (CWE-798), explota fuga de repositorio/logs; criticidad Crítica (CVSS ~9.8); mitigación aplicada: soporte de variables de entorno para reemplazar el secreto sin tocar código (en producción debe eliminarse el fallback).
 const database = process.env.DB_NAME || "horariosdocentes"; // Nombre de la base de datos; parametrizable para separar ambientes.
 
 const sslEnabled = "false"; // Feature flag simple: permite desactivar TLS en entornos locales que no lo soporten.

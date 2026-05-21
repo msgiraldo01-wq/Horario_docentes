@@ -767,6 +767,9 @@
         return caja;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // COMPONENTE FORMULARIO  (crear / editar / borrar)
+    // ─────────────────────────────────────────────────────────────
     function componenteFormulario(modo) {
         const contenedorForm = crearNodo("div", {});
 
@@ -979,39 +982,36 @@
                 if (!res.isConfirmed) return;
             }
 
-          try {
-    if (modo === "crear") {
-        await realizarLlamadoAPI("POST", "/api/horarios", payload);
-        lanzarMensajeFeedback(bloqueAlertas, "Registro creado.", false);
-        btnSubmit.setAttribute("disabled", "true");
-        await ciafAlert({ tipo: "success", titulo: "¡Creado!", mensaje: "El horario fue registrado exitosamente.", timer: 1800 });
-    } else if (modo === "editar") {
-        await realizarLlamadoAPI("PUT", `/api/horarios/${moduloEstado.idSeleccionado}`, payload);
-        lanzarMensajeFeedback(bloqueAlertas, "Horario editado.", false);
-        btnSubmit.setAttribute("disabled", "true");
-        await ciafAlert({ tipo: "success", titulo: "¡Actualizado!", mensaje: "El horario fue editado correctamente.", timer: 1800 });
-    }
+            try {
+                if (modo === "crear") {
+                    await realizarLlamadoAPI("POST", "/api/horarios", payload);
+                    lanzarMensajeFeedback(bloqueAlertas, "Registro creado.", false);
+                    btnSubmit.setAttribute("disabled", "true");
+                    await ciafAlert({ tipo: "success", titulo: "¡Creado!", mensaje: "El horario fue registrado exitosamente.", timer: 1800 });
+                } else if (modo === "editar") {
+                    await realizarLlamadoAPI("PUT", `/api/horarios/${moduloEstado.idSeleccionado}`, payload);
+                    lanzarMensajeFeedback(bloqueAlertas, "Horario editado.", false);
+                    btnSubmit.setAttribute("disabled", "true");
+                    await ciafAlert({ tipo: "success", titulo: "¡Actualizado!", mensaje: "El horario fue editado correctamente.", timer: 1800 });
+                }
+                transicionarModulo("inicio");
+            } catch (ex) {
+                console.error("ERROR COMPLETO:", ex);
+                console.error("DETALLES:", ex.detalles);
+                const msg = ex.detalles?.errors
+                    ? ex.detalles.errors.join(", ")
+                    : ex.message;
+                lanzarMensajeFeedback(bloqueAlertas, msg, true);
+                ciafAlert({ tipo: "error", titulo: "Error al guardar", mensaje: msg });
+            }
+        }); // fin btnSubmit.addEventListener
 
-    transicionarModulo("inicio");
+        return contenedorForm;
+    } // fin componenteFormulario
 
-    } catch (ex) {
-
-    console.error("ERROR COMPLETO:", ex);
-    console.error("DETALLES:", ex.detalles);
-
-    const msg = ex.detalles?.errors
-        ? ex.detalles.errors.join(", ")
-        : ex.message;
-
-    lanzarMensajeFeedback(bloqueAlertas, msg, true);
-
-    ciafAlert({
-        tipo: "error",
-        titulo: "Error al guardar",
-        mensaje: msg
-    });
-    }
-
+    // ─────────────────────────────────────────────────────────────
+    // COMPONENTE TABLA LISTADO
+    // ─────────────────────────────────────────────────────────────
     function componenteTablaListado() {
         const moduloListado = crearNodo("div", {});
         moduloListado.appendChild(crearNodo("h3", { class: "ciaf-list-title", text: "Listado de horarios" }));
@@ -1144,8 +1144,11 @@
 
         cargarDatos();
         return moduloListado;
-    }
+    } // fin componenteTablaListado
 
+    // ─────────────────────────────────────────────────────────────
+    // COMPONENTE VISTA SALIDA
+    // ─────────────────────────────────────────────────────────────
     function componenteVistaSalida() {
         const divExit = crearNodo("div", { class: "ciaf-exit" });
         divExit.appendChild(crearNodo("div", { class: "ciaf-exit-icon",     text: "⊗" }));
@@ -1156,7 +1159,7 @@
         btnRegresar.addEventListener("click", () => transicionarModulo("inicio"));
         divExit.appendChild(btnRegresar);
         return divExit;
-    }
+    } // fin componenteVistaSalida
 
     // ==========================================
     // ORQUESTADOR SPA
@@ -1236,4 +1239,5 @@
     }
 
     renderizarEstructuraBase();
+
 })();
