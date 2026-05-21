@@ -85,18 +85,17 @@ app.post("/api/horarios", async (req, res) => {
 
     } catch (error) {
 
-        if (error.code === "HORARIO_SOLAPADO") {
-
-            return res.status(409).json({
-                message: error.message
-            });
-        }
-
-        console.error(error);
-
-        res.status(500).json({
-            message: "Error interno"
+    if (error.code === "HORARIO_SOLAPADO") {
+        return res.status(409).json({
+            message: error.message
         });
+    }
+
+    console.error(error);
+
+    res.status(500).json({
+        message: error.message  // 👈 muestra el error real temporalmente
+    });
 
     } finally {
 

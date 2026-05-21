@@ -891,13 +891,37 @@
             { id: "formFecha",       label: "Fecha Clase",        type: "date" },
             { id: "formHoraInicia",  label: "Hora Inicia Clase",  type: "time" },
             { id: "formHoraTermina", label: "Hora Termina Clase", type: "time" }
-        ].forEach(c => {
-            const divCol = crearNodo("div", { class: "ciaf-field" });
-            divCol.appendChild(crearNodo("label", { class: "ciaf-label", text: c.label, for: c.id }));
-            const paramsInput = { type: c.type, class: "ciaf-input", id: c.id };
-            if (modo === "borrar") paramsInput.disabled = "true";
-            divCol.appendChild(crearNodo("input", paramsInput));
+        ].forEach(campo => {
+
+            const divCol = crearNodo("div");
+
+            divCol.appendChild(
+                crearNodo("label", {
+                    class: "ciaf-label",
+                    text: campo.label,
+                    for: campo.id
+                })
+            );
+
+            const inputCampo = crearNodo("input", {
+                type: campo.type,
+                class: "ciaf-input",
+                id: campo.id
+            });
+
+            // Bloquear fechas anteriores
+            if (campo.id === "formFecha") {
+
+                const hoy = new Date();
+                hoy.setMinutes(hoy.getMinutes() - hoy.getTimezoneOffset());
+
+                inputCampo.min = hoy.toISOString().split("T")[0];
+            }
+
+            divCol.appendChild(inputCampo);
+
             formTag.appendChild(divCol);
+
         });
 
         // ── Botones ──
@@ -963,6 +987,79 @@
                 horaIniciaClase:  sanitizarTexto(document.getElementById("formHoraInicia").value),
                 horaTerminaClase: sanitizarTexto(document.getElementById("formHoraTermina").value)
             };
+
+                // Validar duración de la clase
+
+            const convertirMinutos = (hora) => {
+
+                const [h, m] = hora.split(":").map(Number);
+
+                return (h * 60) + m;
+            };
+
+            const inicio = convertirMinutos(payload.horaIniciaClase);
+
+            const fin = convertirMinutos(payload.horaTerminaClase);
+
+            const duracion = fin - inicio;
+
+            // Validar hora inicio < hora fin
+
+            if (inicio >= fin) {
+
+                lanzarMensajeFeedback(
+                    bloqueAlertas,
+                    "La hora de inicio debe ser menor que la hora de finalización.",
+                    true
+                );
+
+                return;
+            }
+
+            // Validar fecha actual o futura
+
+            const hoy = new Date();
+
+            hoy.setHours(0, 0, 0, 0);
+
+            const fechaSeleccionada = new Date(payload.fechaClase + "T00:00:00");
+
+            if (fechaSeleccionada < hoy) {
+
+                lanzarMensajeFeedback(
+                    bloqueAlertas,
+                    "No puedes registrar horarios en fechas anteriores.",
+                    true
+                );
+
+                return;
+            }
+
+            // Validar duración mínima
+
+            if (duracion < 45) {
+
+                lanzarMensajeFeedback(
+                    bloqueAlertas,
+                    "La clase debe durar mínimo 45 minutos.",
+                    true
+                );
+
+                return;
+            }
+
+            // Validar duración máxima
+
+            if (duracion > 360) {
+
+                lanzarMensajeFeedback(
+                    bloqueAlertas,
+                    "La clase no puede durar más de 6 horas.",
+                    true
+                );
+
+                return;
+            }
 
             if (Object.values(payload).some(v => !v)) {
                 lanzarMensajeFeedback(bloqueAlertas, "Debes completar los datos del formulario.", true);

@@ -60,6 +60,36 @@ function validarHorario(horario) {
 
     throw err;
   }
+  const [h1, m1] = horario.horaIniciaClase
+    .split(":")
+    .map(Number);
+
+  const [h2, m2] = horario.horaTerminaClase
+    .split(":")
+    .map(Number);
+
+  const inicio = h1 * 60 + m1;
+  const fin = h2 * 60 + m2;
+  const duracion = fin - inicio;
+
+  if (duracion < 45) {
+    const err = new Error(
+      "La clase debe durar mínimo 45 minutos"
+    );
+
+    err.code = "INVALID_MIN_DURATION";
+
+    throw err;
+  }
+  if (duracion > 360) {
+    const err = new Error(
+      "La clase no puede durar más de 6 horas"
+    );
+
+    err.code = "INVALID_MAX_DURATION";
+
+    throw err;
+  }
 }
 
 async function withWriteLock(connection, fn) {
