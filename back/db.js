@@ -1,25 +1,23 @@
-/**
- * Capa de acceso a base de datos (pool MySQL).
- *
- * Seguridad:
- * - Pool en backend (Node.js). El frontend nunca se conecta directo a MySQL.
- * - Todas las operaciones deben usar sentencias preparadas (connection.execute).
- */
+// Importa la librería 'mysql2' en su versión que utiliza promesas. Esto nos permite utilizar 'async/await' para esperar la respuesta de la base de datos de manera limpia y ordenada.
+const mysql = require("mysql2/promise");
 
-const mysql = require("mysql2/promise"); // Importa el driver mysql2 en modo Promesas para usar async/await en las consultas.
-const dbConfig = require("../variables/dbConfig"); // Carga la configuración de conexión desde un módulo centralizado (idealmente parametrizado por entorno).
+// Importa los datos de configuración (como el servidor, usuario, contraseña y base de datos) desde el archivo centralizado de configuración de variables.
+const dbConfig = require("../variables/dbConfig");
 
-const pool = mysql.createPool({ // Crea un pool de conexiones para reutilizar sockets y reducir latencia/costo de conexión.
-  host: dbConfig.host, // Host del servidor MySQL.
-  port: dbConfig.port, // Puerto TCP de MySQL (default 3306).
-  user: dbConfig.user, // Usuario con privilegios mínimos necesarios para operar la tabla.
-  password: dbConfig.password, // Contraseña del usuario (idealmente provista por variables de entorno; evita hardcoding).
-  database: dbConfig.database, // Base de datos a usar por defecto en la conexión.
-  ssl: dbConfig.ssl, // Parámetros TLS (si aplica) para proteger credenciales/datos en tránsito.
-  connectionLimit: 10, // Máximo de conexiones simultáneas en el pool para evitar saturación del servidor.
-  waitForConnections: true, // Si el pool se llena, encola solicitudes en vez de fallar inmediatamente.
-  queueLimit: 0, // 0 = sin límite de cola; útil en laboratorios, pero en producción conviene limitar para evitar DoS por acumulación.
-  namedPlaceholders: false // Usa placeholders posicionales "?" en vez de ":name" para simplificar el SQL en este proyecto.
-}); // Vulnerabilidad potencial: DoS por agotamiento de conexiones; criticidad Media (CVSS ~6.5) si público; mitigación: connectionLimit + timeouts en el servidor HTTP.
+// Creamos un "pool" o grupo de conexiones a la base de datos.
+// Esto permite reutilizar conexiones existentes en lugar de abrir y cerrar una nueva conexión cada vez que el usuario hace una petición, haciendo que el sistema sea mucho más rápido.
+const pool = mysql.createPool({
+  host: dbConfig.host, // Establece la dirección del servidor de la base de datos (por ejemplo, '127.0.0.1' que es la propia maquina).
+  port: dbConfig.port, // Establece el puerto de comunicación que utiliza MySQL (por defecto es el puerto 3306).
+  user: dbConfig.user, // Establece el nombre de usuario de la base de datos que tiene permisos para acceder.
+  password: dbConfig.password, // Establece la contraseña del usuario de la base de datos.
+  database: dbConfig.database, // Especifica el nombre de la base de datos con la que vamos a interactuar ('horariosdocentes').
+  ssl: dbConfig.ssl, // Configuración de seguridad SSL para proteger la información transmitida (si está activa).
+  connectionLimit: 10, // Limita a un máximo de 10 conexiones activas simultáneamente para evitar que la base de datos colapse.
+  waitForConnections: true, // Si no hay conexiones libres en el momento, el sistema esperará a que una se desocupe en lugar de fallar.
+  queueLimit: 0, // Define el número máximo de peticiones esperando conexión. El valor 0 significa sin límite.
+  namedPlaceholders: false // Si está en false, indica que usaremos el signo '?' para colocar los valores dentro de las consultas SQL de forma ordenada.
+});
 
-module.exports = { pool }; // Exporta el pool para que el resto del backend obtenga conexiones de forma consistente.
+// Exporta el grupo de conexiones ('pool') para que pueda ser utilizado por otros archivos del servidor que necesiten consultar, insertar, modificar o eliminar datos de los horarios.
+module.exports = { pool }; 
