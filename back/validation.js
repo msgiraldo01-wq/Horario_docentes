@@ -107,7 +107,10 @@ function validateHorarioPayload(payload) {
   if (!DATE_REGEX.test(fechaClase)) {
     errors.push("fechaClase inválida (YYYY-MM-DD)"); // Agrega error si el formato es incorrecto.
   } else {
-    const fecha = new Date(fechaClase + "T00:00:00"); // Si el formato es correcto, crea un objeto de fecha en JavaScript interpretando en hora local y no en UTC.
+    // Si el formato es correcto, crea un objeto de fecha en JavaScript.
+    // Se agrega "T00:00:00" para que JavaScript interprete la fecha en hora local
+    // y no en UTC, evitando que la fecha se corra un día atrás en zonas horarias negativas.
+    const fecha = new Date(fechaClase + "T00:00:00");
 
     const hoy = new Date(); // Obtiene la fecha y hora actuales.
 
